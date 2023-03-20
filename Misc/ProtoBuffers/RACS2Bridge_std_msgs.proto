@@ -1,0 +1,45 @@
+syntax = "proto2";
+
+message RACS2Bridge_std_msgs {
+    // -- std_msgs/Bool ---------------------------
+    optional bool bool_data = 1;
+
+    // -- std_msgs/Float32 ---------------------------
+    optional float float_data = 2;
+
+    // -- std_msgs/Float64 ---------------------------
+    optional double double_data = 3;
+
+    // -- std_msgs/Int32 ---------------------------
+    optional int32 int32_data = 4;
+
+    // -- std_msgs/Int64 ---------------------------
+    optional int64 int64_data = 5;
+
+    // -- std_msgs/String ---------------------------
+    optional string string_data = 6;
+
+    // -- std_msgs/Uint32 ---------------------------
+    optional uint32 uint32_data = 7;
+
+    // -- std_msgs/Uint64 ---------------------------
+    optional uint64 uint64_data = 8;
+
+    // -- std_msgs/Float32MultiArray ---------------------------
+    repeated float float32_array_data = 9 [packed = true];
+
+    // -- std_msgs/Float64MultiArray ---------------------------
+    repeated double float64_array_data = 10 [packed = true];
+
+    // -- std_msgs/Int32MultiArray ---------------------------
+    repeated int32 int32_array_data = 11 [packed = true];
+
+    // -- std_msgs/Int64MultiArray ---------------------------
+    repeated int64 int64_array_data = 12 [packed = true];
+
+    // -- std_msgs/Uint32MultiArray ---------------------------
+    repeated uint32 uint32_array_data = 13 [packed = true];
+
+    // -- std_msgs/Uint64MultiArray ---------------------------
+    repeated uint64 uint64_array_data = 14 [packed = true];
+}
