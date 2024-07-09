@@ -29,11 +29,6 @@ This file contains a description of the RACS2 Example. The following movements c
 ### Procedure
 
 - Preparation of execution environment on the ROS2 side.
-  - Go to the top of the cFS project directory and execute the following build command
-    ```
-    cp cfe/cmake/Makefile.sample Makefile
-    cp -r cfe/cmake/sample_defs sample_defs
-    ```
 
   - Place ROS2 bridge and example directories in the ROS2 execution environment.
     ```
@@ -42,12 +37,19 @@ This file contains a description of the RACS2 Example. The following movements c
     cp -pr  racs2_bridge/Example/Case.1/ROS2/racs2_msg [ROS2 project path]/src/
     ```
 
-  - Go to the top of the ROS2 project directory and execute the following build command
+  - Go to the top of the ROS2 project directory and execute the following build command.
     ```
     colcon build --symlink-install
     ```
 
 - Preparation of execution environment on the cFS side.
+
+  - Go to the top of the cFS project directory and execute the following build command.
+    ```
+    cp cfe/cmake/Makefile.sample Makefile
+    cp -r cfe/cmake/sample_defs sample_defs
+    ```
+
   - Place cFS bridge and example directories in the cFS execution environment.
     ```
     cp -pr  racs2_bridge/cFS/Bridge/Client_C/apps/racs2_bridge_client [cFS project path]/apps/
@@ -56,7 +58,6 @@ This file contains a description of the RACS2 Example. The following movements c
     ```
 
   - Edit L.250 of "[cFS project path]/sample_defs/default_osconfig.h" as follows,
-
     ```
     #define OSAL_DEBUG_PERMISSIVE_MODE
     ```
