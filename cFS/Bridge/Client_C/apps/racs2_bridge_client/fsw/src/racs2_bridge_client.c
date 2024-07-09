@@ -318,7 +318,7 @@ void RACS2_BRIDGE_CLIENT_Init(void)
 
     CFE_SB_InitMsg(&RACS2_BRIDGE_CLIENT_HkTelemetryPkt,
                    RACS2_BRIDGE_CLIENT_HK_TLM_MID,
-                   CFS_CHAR_ARR_MSG_LNGTH, true);
+                   SAMPLE_APP_HK_TLM_LNGTH, true);
 
     CFE_EVS_SendEvent (SAMPLE_STARTUP_INF_EID, CFE_EVS_EventType_INFORMATION,
                "RACS2_BRIDGE_CLIENT App Initialized. Version %d.%d.%d.%d",
