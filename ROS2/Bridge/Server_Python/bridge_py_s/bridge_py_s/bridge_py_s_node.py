@@ -106,7 +106,7 @@ async def wss_recv():
             gNode.register_publisher(topic_name)
             publish_message = RACS2UserMsg()
             publish_message.body_data_length = len(recv_message) - 32
-            bytes_list = [elem.encode() for elem in recv_message[32:-1]]
+            bytes_list = [elem.encode() for elem in recv_message[32:]]
             publish_message.body_data = bytes_list
             if gNode is not None:
                 gNode.do_publish(topic_name, publish_message)
