@@ -100,13 +100,13 @@ async def wss_recv():
     while True:
         try:
             recv_message = await websocket.recv()
-            print('WssRecv: ' + recv_message)
-            topic_name = recv_message[0:32].rstrip('\x00')
-            print("topic name = ", topic_name)
+            print(f'WssRecv: {recv_message}')
+            topic_name = recv_message[0:32].decode()
+            print(f"topic name = {topic_name}")
             gNode.register_publisher(topic_name)
             publish_message = RACS2UserMsg()
             publish_message.body_data_length = len(recv_message) - 32
-            bytes_list = [elem.encode() for elem in recv_message[32:]]
+            bytes_list = [bytes([elem]) for elem in recv_message[32:]]
             publish_message.body_data = bytes_list
             if gNode is not None:
                 gNode.do_publish(topic_name, publish_message)
