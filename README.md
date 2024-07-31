@@ -35,9 +35,9 @@ This project is under the Apache 2.0 license. See LICENSE text file.
 ## Dependency
 
 - Base OS :
-  - Ubuntu 20.04 LTS
+  - Ubuntu 22.04 LTS
 - ROS2 :
-  - "ros-foxy" package.
+  - "ros-humble" package.
 - cFS : 
   - [cFE 6.7.0a](https://github.com/nasa/cFS/releases/tag/v6.7.0a)
   - [OSAL v5.0.0](https://github.com/nasa/osal/releases/tag/v5.0.0)
@@ -50,7 +50,16 @@ This project is under the Apache 2.0 license. See LICENSE text file.
 - ROS2 and cFS shall be installed on the OS.
   - See below.
     - [ROS2 Installation](https://docs.ros.org/en/foxy/Installation/Ubuntu-Install-Debians.html)
-    - [cFS Installation](https://github.com/nasa/cFE)
+
+    - [cFS Installation](https://github.com/nasa/cFS)
+      Do the following:
+      ```
+      git clone https://github.com/nasa/cFS.git
+      cd [cFS project path]
+      git submodule init
+      git submodule update
+      ```
+
     - [OSAL Installation](https://github.com/nasa/osal)
 
 ### Procedure
@@ -75,9 +84,19 @@ This project is under the Apache 2.0 license. See LICENSE text file.
     pip install protobuf
     ```
 
-- git clone the [RACS2 Bridge](https://github.com/jaxa/racs2_bridge.git) source code.  
+- git clone the RACS2 Bridge.
+  ```
+  git clone https://github.com/jaxa/racs2_bridge.git
+  ```
 
 - Preparation of execution environment on the cFS side.  
+  - If the cFS version is not 6.7.0a, go to the top of the cFS project directory and do the following:
+    ```
+    git checkout v6.7.0a
+    git submodule init
+    git submodule update
+    ```
+
   - Go to the top of the cFS project directory and execute the following build command
     ```
     cp cfe/cmake/Makefile.sample Makefile
@@ -87,7 +106,12 @@ This project is under the Apache 2.0 license. See LICENSE text file.
   - Bridge application placement in the cFS execution environment.
     ```
     cp -pr racs2_bridge/cFS/Bridge/Client_C/apps/racs2_bridge_client [cFS project path]/apps/
-    cp -p racs2_bridge/cFS/Bridge/Client_C/sample_defs/* [cFS project path]/sample_defs/
+    cp -pr racs2_bridge/cFS/Bridge/Client_C/sample_defs/* [cFS project path]/sample_defs/
+    ```
+
+  - Edit L.205 of "[cFS project path]/sample_defs/default_osconfig.h" as follows,
+    ```
+    #define OSAL_DEBUG_PERMISSIVE_MODE
     ```
 
   - Go to the top of the cFS project directory and execute the following build command
@@ -119,7 +143,7 @@ This project is under the Apache 2.0 license. See LICENSE text file.
   cd [cFS project path]/build/exe/cpu1
   ./core-cpu1
   ```
-
+  
 - Start the ROS2 publishers and subscribers.
 
 - Start the cFS publishers and subscribers.
