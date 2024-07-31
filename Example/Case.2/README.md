@@ -24,7 +24,21 @@ This file contains a description of the RACS2 Example. The following movements c
 
 ### Premise
 
+- cFS must be cloned. If not, do the following:
+  ```
+  git clone https://github.com/nasa/cFS.git
+  cd [cFS project path]
+  git submodule init
+  git submodule update
+  ```
+
+- RACS2 Bridge must be cloned. If not, do the following:
+  ```
+  git clone https://github.com/jaxa/racs2_bridge.git
+  ```
+
 - The RACS2 Bridge Server and Client must be up and connected.
+
 
 ### Procedure
 
@@ -44,6 +58,13 @@ This file contains a description of the RACS2 Example. The following movements c
 
 - Preparation of execution environment on the cFS side.
 
+  - If the cFS version is not 6.7.0a, go to the top of the cFS project directory and do the following:
+    ```
+    git checkout v6.7.0a
+    git submodule init
+    git submodule update
+    ``
+
   - Go to the top of the cFS project directory and execute the following build command.
     ```
     cp cfe/cmake/Makefile.sample Makefile
@@ -57,7 +78,7 @@ This file contains a description of the RACS2 Example. The following movements c
     cp -pr  racs2_bridge/Example/Case.2/cFS/sample_defs/* [cFS project path]/sample_defs/
     ```
 
-  - Edit L.250 of "[cFS project path]/sample_defs/default_osconfig.h" as follows,
+  - Edit L.205 of "[cFS project path]/sample_defs/default_osconfig.h" as follows,
     ```
     #define OSAL_DEBUG_PERMISSIVE_MODE
     ```
