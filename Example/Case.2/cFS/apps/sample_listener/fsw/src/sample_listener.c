@@ -119,7 +119,7 @@ void SAMPLE_LISTENER_Init(void)
                 SAMPLE_APP_MINOR_VERSION, 
                 SAMPLE_APP_REVISION, 
                 SAMPLE_APP_MISSION_REV);
-				
+                
 } /* End of SAMPLE_LISTENER_Init() */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
@@ -185,7 +185,7 @@ void SAMPLE_LISTENER_ProcessCommandPacket(void)
         default:
             SAMPLE_LISTENER_HkTelemetryPkt.sample_command_error_count++;
             CFE_EVS_SendEvent(SAMPLE_COMMAND_ERR_EID,CFE_EVS_EventType_ERROR,
-			"SAMPLE_LISTENER: invalid command packet,MID = 0x%x", MsgId);
+            "SAMPLE_LISTENER: invalid command packet,MID = 0x%x", MsgId);
             break;
     }
 
@@ -213,7 +213,7 @@ void SAMPLE_LISTENER_ProcessGroundCommand(void)
             SAMPLE_LISTENER_HkTelemetryPkt.sample_command_count++;
             CFE_EVS_SendEvent(SAMPLE_COMMANDNOP_INF_EID,
                         CFE_EVS_EventType_INFORMATION,
-			"SAMPLE_LISTENER: NOOP command");
+                        "SAMPLE_LISTENER: NOOP command");
             break;
 
         case SAMPLE_APP_RESET_COUNTERS_CC:
@@ -260,7 +260,7 @@ void SAMPLE_LISTENER_ResetCounters(void)
     SAMPLE_LISTENER_HkTelemetryPkt.sample_command_error_count = 0;
 
     CFE_EVS_SendEvent(SAMPLE_COMMANDRST_INF_EID, CFE_EVS_EventType_INFORMATION,
-		"SAMPLE_LISTENER: RESET command");
+                      "SAMPLE_LISTENER: RESET command");
     return;
 
 } /* End of SAMPLE_LISTENER_ResetCounters() */

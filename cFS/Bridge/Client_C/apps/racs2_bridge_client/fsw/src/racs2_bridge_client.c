@@ -45,8 +45,8 @@ static struct lws *web_socket = NULL;
 static struct lws* g_wsi_ptr = NULL;
 enum protocols
 {
-	PROTOCOL_EXAMPLE = 0,
-	PROTOCOL_COUNT
+    PROTOCOL_EXAMPLE = 0,
+    PROTOCOL_COUNT
 };
 
 #define EXAMPLE_RX_BUFFER_BYTES (256)
@@ -57,20 +57,20 @@ uint16 dest_message_id_list[RACS2_BRIDGE_DEST_MSGID_NUM] = {0};
 
 static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
 {
-	lwsl_user( "BBB: callback_example()\n" ) ;
+    lwsl_user( "BBB: callback_example()\n" ) ;
     g_wsi_ptr = wsi;
-	
-	switch( reason )
-	{
-		case LWS_CALLBACK_CLIENT_ESTABLISHED:
-			lwsl_user( "case LWS_CALLBACK_CLIENT_ESTABLISHED: \n" ) ;
-			lws_callback_on_writable( wsi );
-			break;
+    
+    switch( reason )
+    {
+        case LWS_CALLBACK_CLIENT_ESTABLISHED:
+            lwsl_user( "case LWS_CALLBACK_CLIENT_ESTABLISHED: \n" ) ;
+            lws_callback_on_writable( wsi );
+            break;
 
-		case LWS_CALLBACK_CLIENT_RECEIVE:
-			lwsl_user( "case LWS_CALLBACK_CLIENT_RECEIVE: \n" ) ;
+        case LWS_CALLBACK_CLIENT_RECEIVE:
+            lwsl_user( "case LWS_CALLBACK_CLIENT_RECEIVE: \n" ) ;
             lwsl_user( "[Recv]: %s\n", (char*)in ) ;
-			lwsl_user( "[Recv]: data len = %d\n", len ) ;
+            lwsl_user( "[Recv]: data len = %d\n", len ) ;
             
             // === send message =========================
             char *hello = "Hello";
@@ -111,16 +111,16 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
             }
            
 
-			break;
+            break;
 
-		case LWS_CALLBACK_CLIENT_WRITEABLE:
-		{
-			lwsl_user( "case LWS_CALLBACK_CLIENT_WRITEABLE: \n" ) ;
+        case LWS_CALLBACK_CLIENT_WRITEABLE:
+        {
+            lwsl_user( "case LWS_CALLBACK_CLIENT_WRITEABLE: \n" ) ;
 
-			// unsigned char buf[ LWS_SEND_BUFFER_PRE_PADDING + EXAMPLE_RX_BUFFER_BYTES + LWS_SEND_BUFFER_POST_PADDING];
-			// unsigned char *p = &buf[ LWS_SEND_BUFFER_PRE_PADDING ] ;
-			// size_t n = sprintf( (char *)p, "Hello, from Client" );
-			// lws_write( wsi, p, n, LWS_WRITE_TEXT );
+            // unsigned char buf[ LWS_SEND_BUFFER_PRE_PADDING + EXAMPLE_RX_BUFFER_BYTES + LWS_SEND_BUFFER_POST_PADDING];
+            // unsigned char *p = &buf[ LWS_SEND_BUFFER_PRE_PADDING ] ;
+            // size_t n = sprintf( (char *)p, "Hello, from Client" );
+            // lws_write( wsi, p, n, LWS_WRITE_TEXT );
             if (g_is_bridge_msg_sent)
             {
                 pthread_mutex_lock(&g_bridge_msg_flag_mutex);
@@ -131,31 +131,31 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
             g_is_bridge_msg_sent = 0;
             pthread_mutex_unlock(&g_bridge_msg_flag_mutex);
             break;
-		}
+        }
 
-		case LWS_CALLBACK_CLOSED:
-		case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
-			lwsl_user( "case LWS_CALLBACK_CLOSED or LWS_CALLBACK_CLIENT_CONNECTION_ERROR: \n" ) ;
-			web_socket = NULL;
-			break;
+        case LWS_CALLBACK_CLOSED:
+        case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
+            lwsl_user( "case LWS_CALLBACK_CLOSED or LWS_CALLBACK_CLIENT_CONNECTION_ERROR: \n" ) ;
+            web_socket = NULL;
+            break;
 
-		default:
-			lwsl_user( "case : default\n" ) ;
-			break;
-	}
+        default:
+            lwsl_user( "case : default\n" ) ;
+            break;
+    }
 
-	return 0;
+    return 0;
 }
 
 static struct lws_protocols protocols[] =
 {
-	{
-		"example-protocol",
-		callback_example,
-		0,
-		EXAMPLE_RX_BUFFER_BYTES,
-	},
-	{ NULL, NULL, 0, 0 } /* terminator */
+    {
+        "example-protocol",
+        callback_example,
+        0,
+        EXAMPLE_RX_BUFFER_BYTES,
+    },
+    { NULL, NULL, 0, 0 } /* terminator */
 };
 
 struct lws_context_creation_info g_info;
@@ -196,32 +196,32 @@ void RACS2_BRIDGE_CLIENT_Main( void )
     {
         CFE_ES_PerfLogExit(SAMPLE_APP_PERF_ID);
 
-		// === BBB: For WebSocket ===============
-		struct timeval tv;
-		gettimeofday( &tv, NULL );
-		
-		/* Connect if we are not connected to the server. */
-		if( ! web_socket && tv.tv_sec != g_old )
-		{
-			struct lws_client_connect_info ccinfo = {0};
-			ccinfo.context = g_context ;
-			ccinfo.address = wss_uri;
-			ccinfo.port = wss_port;
-			ccinfo.path = "/";
-			ccinfo.host = lws_canonical_hostname( g_context );
-			ccinfo.origin = "origin";
-			ccinfo.protocol = protocols[PROTOCOL_EXAMPLE].name;
-			web_socket = lws_client_connect_via_info(&ccinfo);
-		}
+        // === BBB: For WebSocket ===============
+        struct timeval tv;
+        gettimeofday( &tv, NULL );
+        
+        /* Connect if we are not connected to the server. */
+        if( ! web_socket && tv.tv_sec != g_old )
+        {
+            struct lws_client_connect_info ccinfo = {0};
+            ccinfo.context = g_context ;
+            ccinfo.address = wss_uri;
+            ccinfo.port = wss_port;
+            ccinfo.path = "/";
+            ccinfo.host = lws_canonical_hostname( g_context );
+            ccinfo.origin = "origin";
+            ccinfo.protocol = protocols[PROTOCOL_EXAMPLE].name;
+            web_socket = lws_client_connect_via_info(&ccinfo);
+        }
 
-		if( tv.tv_sec != g_old )
-		{
-			/* Send a random number to the server every second. */
-			lws_callback_on_writable( web_socket );
-			g_old = tv.tv_sec;
-		}
-		
-		lws_service( g_context, (0) );
+        if( tv.tv_sec != g_old )
+        {
+            /* Send a random number to the server every second. */
+            lws_callback_on_writable( web_socket );
+            g_old = tv.tv_sec;
+        }
+        
+        lws_service( g_context, (0) );
         // === EEE: For WebSocket =====================
 
         /* Pend on receipt of command packet -- timeout set to 500 millisecs */
@@ -326,7 +326,7 @@ void RACS2_BRIDGE_CLIENT_Init(void)
                 SAMPLE_APP_MINOR_VERSION, 
                 SAMPLE_APP_REVISION, 
                 SAMPLE_APP_MISSION_REV);
-				
+                
 } /* End of RACS2_BRIDGE_CLIENT_Init() */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * ***/
@@ -380,7 +380,7 @@ void RACS2_BRIDGE_CLIENT_ProcessCommandPacket(void)
         default:
             RACS2_BRIDGE_CLIENT_HkTelemetryPkt.sample_command_error_count++;
             CFE_EVS_SendEvent(SAMPLE_COMMAND_ERR_EID,CFE_EVS_EventType_ERROR,
-			"RACS2_BRIDGE_CLIENT: invalid command packet,MID = 0x%x", MsgId);
+            "RACS2_BRIDGE_CLIENT: invalid command packet,MID = 0x%x", MsgId);
             break;
     }
 
@@ -407,7 +407,7 @@ void RACS2_BRIDGE_CLIENT_ProcessGroundCommand(void)
             RACS2_BRIDGE_CLIENT_HkTelemetryPkt.sample_command_count++;
             CFE_EVS_SendEvent(SAMPLE_COMMANDNOP_INF_EID,
                         CFE_EVS_EventType_INFORMATION,
-			"RACS2_BRIDGE_CLIENT: NOOP command");
+                        "RACS2_BRIDGE_CLIENT: NOOP command");
             break;
 
         case SAMPLE_APP_RESET_COUNTERS_CC:
@@ -454,7 +454,7 @@ void RACS2_BRIDGE_CLIENT_ResetCounters(void)
     RACS2_BRIDGE_CLIENT_HkTelemetryPkt.sample_command_error_count = 0;
 
     CFE_EVS_SendEvent(SAMPLE_COMMANDRST_INF_EID, CFE_EVS_EventType_INFORMATION,
-		"RACS2_BRIDGE_CLIENT: RESET command");
+                      "RACS2_BRIDGE_CLIENT: RESET command");
     return;
 
 } /* End of RACS2_BRIDGE_CLIENT_ResetCounters() */
