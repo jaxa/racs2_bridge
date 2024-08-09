@@ -71,10 +71,10 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
 			lwsl_user( "case LWS_CALLBACK_CLIENT_RECEIVE: \n" ) ;
             lwsl_user( "[Recv]: %s\n", (char*)in ) ;
 			lwsl_user( "[Recv]: data len = %d\n", len ) ;
-            
+
             // === send message =========================
             char *hello = "Hello";
-            if (!strncmp((char*)in, hello, 1)) 
+            if (!strncmp((char*)in, hello, 1))
             {
                 // OS_printf("[Recv]: %s\n", (char*)in);
                 break;
@@ -99,17 +99,17 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
             // Send message
             CFE_SB_TimeStampMsg((CFE_SB_Msg_t *) &RACS2_UserMsgPkt);
             int32 status = CFE_SB_SendMsg((CFE_SB_Msg_t *) &RACS2_UserMsgPkt);
-            // OS_printf("RACS2_BRIDGE_CLIENT: Sent message, MID = [0x%x], sample_command_count = %d\n", 
+            // OS_printf("RACS2_BRIDGE_CLIENT: Sent message, MID = [0x%x], sample_command_count = %d\n",
             //     CFE_SB_GetMsgId((CFE_SB_MsgPtr_t) &RACS2_UserMsgPkt),
             //     RACS2_UserMsgPkt.sample_command_count
             //     );
-            OS_printf("RACS2_BRIDGE_CLIENT: Sent message, MID = [0x%x]\n", 
+            OS_printf("RACS2_BRIDGE_CLIENT: Sent message, MID = [0x%x]\n",
                 CFE_SB_GetMsgId((CFE_SB_MsgPtr_t) &RACS2_UserMsgPkt)
-            );  
+            );
             if (status != CFE_SUCCESS) {
                 OS_printf("RACS2_BRIDGE_CLIENT: Error: sending is failed. \n");
             }
-           
+
 
 			break;
 
@@ -226,7 +226,7 @@ void RACS2_BRIDGE_CLIENT_Main( void )
 
         /* Pend on receipt of command packet -- timeout set to 500 millisecs */
         status = CFE_SB_RcvMsg(&RACS2_UserMsgPkt_Ptr, RACS2_BRIDGE_CLIENT_CommandPipe, 1000);
-        
+
         CFE_ES_PerfLogEntry(SAMPLE_APP_PERF_ID);
 
         if (status == CFE_SUCCESS)
@@ -252,7 +252,7 @@ void RACS2_BRIDGE_CLIENT_Main( void )
 void RACS2_BRIDGE_CLIENT_Init(void)
 {
     int32 status;
-    
+
     /**
      * Read config
     */
@@ -268,7 +268,7 @@ void RACS2_BRIDGE_CLIENT_Init(void)
         exit(-1);
     }
 
-    char *ch_wss_uri  = "wss_uri"; 
+    char *ch_wss_uri  = "wss_uri";
     char *ch_wss_port = "wss_port";
     while ((str = fgets(line, 128, fp)) != NULL) {
         sscanf(line, "%[^=]=%s", key, value);
@@ -295,7 +295,7 @@ void RACS2_BRIDGE_CLIENT_Init(void)
 
     /*
     ** Register the events
-    */ 
+    */
     CFE_EVS_Register(SAMPLE_EventFilters,
                      sizeof(SAMPLE_EventFilters)/sizeof(CFE_EVS_BinFilter_t),
                      CFE_EVS_EventFilter_BINARY);
@@ -323,8 +323,8 @@ void RACS2_BRIDGE_CLIENT_Init(void)
     CFE_EVS_SendEvent (SAMPLE_STARTUP_INF_EID, CFE_EVS_EventType_INFORMATION,
                "RACS2_BRIDGE_CLIENT App Initialized. Version %d.%d.%d.%d",
                 SAMPLE_APP_MAJOR_VERSION,
-                SAMPLE_APP_MINOR_VERSION, 
-                SAMPLE_APP_REVISION, 
+                SAMPLE_APP_MINOR_VERSION,
+                SAMPLE_APP_REVISION,
                 SAMPLE_APP_MISSION_REV);
 				
 } /* End of RACS2_BRIDGE_CLIENT_Init() */
@@ -343,7 +343,7 @@ void RACS2_BRIDGE_CLIENT_ProcessCommandPacket(void)
 
     MsgId = CFE_SB_GetMsgId(RACS2_UserMsgPkt_Ptr);
     OS_printf("RACS2_BRIDGE_CLIENT: recceived MsgId = %x\n", MsgId);
-            
+
     racs2_user_msg_t* tmp_ptr;
 
     switch (MsgId)
@@ -358,7 +358,7 @@ void RACS2_BRIDGE_CLIENT_ProcessCommandPacket(void)
 
         case RACS2_BRIDGE_MID:
             tmp_ptr = (racs2_user_msg_t*) RACS2_UserMsgPkt_Ptr;
-            OS_printf("RACS2_BRIDGE_CLIENT: received sample message from talker, MID = [0x%x].\n", 
+            OS_printf("RACS2_BRIDGE_CLIENT: received sample message from talker, MID = [0x%x].\n",
                 MsgId
             );
             OS_printf("RACS2_BRIDGE_CLIENT: ros2_topic_name = %s\n", tmp_ptr->ros2_topic_name);
@@ -465,7 +465,7 @@ void RACS2_BRIDGE_CLIENT_ResetCounters(void)
 /*                                                                            */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
 bool RACS2_BRIDGE_CLIENT_VerifyCmdLength(CFE_SB_MsgPtr_t msg, uint16 ExpectedLength)
-{     
+{
     bool result = true;
 
     uint16 ActualLength = CFE_SB_GetTotalMsgLength(msg);
@@ -497,7 +497,7 @@ bool is_new_msgid(uint16 msgid)
     // check if msgid is already registered
     for (i = 0; i < RACS2_BRIDGE_DEST_MSGID_NUM; i++)
     {
-        if (msgid == dest_message_id_list[i]) 
+        if (msgid == dest_message_id_list[i])
         {
             return false;
         }

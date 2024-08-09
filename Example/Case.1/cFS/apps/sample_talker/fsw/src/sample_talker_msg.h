@@ -21,7 +21,7 @@ typedef struct
 /*
 ** Type definition (SAMPLE App housekeeping)
 */
-typedef struct 
+typedef struct
 {
     uint8              TlmHeader[CFE_SB_TLM_HDR_SIZE];
     uint8              sample_command_error_count;

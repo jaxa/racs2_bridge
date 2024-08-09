@@ -8,7 +8,7 @@
 #define ROS2_TOPIC_NAME_LNGTH   32
 #define BODY_DATA_MAX_LNGTH   128
 
-typedef struct 
+typedef struct
 {
     uint8              TlmHeader[CFE_SB_TLM_HDR_SIZE];
     char               ros2_topic_name[ROS2_TOPIC_NAME_LNGTH];

@@ -44,11 +44,11 @@
             # --- Header data ---
             uint32 cfs_message_id    # Message ID of cFS destination app
             uint32 body_data_length  # Body data size in byte
-            # --- Body data (serialized data is preferred): array of byte --- 
-            # Note: 
+            # --- Body data (serialized data is preferred): array of byte ---
+            # Note:
             #   - In Python: "byte" means bytes object
             #   - In C++   : "byte" means uint8_t type
-            byte[] body_data        
+            byte[] body_data
             ```
 
     * Import message definition
@@ -76,7 +76,7 @@
 		msg_body = RACS2Bridge_std_msgs()
 		msg_body.string_data = 'Message S2C : %d' % self.i
 
-		# serialize message data and fill message body 
+		# serialize message data and fill message body
 		serialized_msg_body = msg_body.SerializeToString()
 		for i in range(len(serialized_msg_body)):
 			msg.body_data.append(serialized_msg_body[i:i+1])
@@ -141,7 +141,7 @@
         ```
 
 
-    * Receive message 
+    * Receive message
         ```
         status = CFE_SB_RcvMsg(&RACS2_UserMsgPkt_Ptr, SAMPLE_LISTENER_CommandPipe, 1000);
         ```
@@ -195,7 +195,7 @@
         // send message
         // set topic name
         strcpy(RACS2_UserMsgPkt.ros2_topic_name, "/Recv/RACS2Bridge");
-        // define serialized body data 
+        // define serialized body data
         void *buffer;
         int len=0;
         RACS2BridgeStdMsgs *message;
@@ -207,7 +207,7 @@
         message->string_data = (char *)malloc(sizeof(string_length));
         OS_printf("SAMPLE_TALKER: [Send][MsgID=0x%x][%s]\n", RACS2_BRIDGE_MID, buf);
         strncpy(message->string_data, buf, string_length);
-      
+
         len = racs2_bridge_std_msgs__get_packed_size(message);
         buffer=malloc(len);
         racs2_bridge_std_msgs__pack(message, buffer);
@@ -263,11 +263,11 @@
             # --- Header data ---
             uint32 cfs_message_id    # Message ID of cFS destination app
             uint32 body_data_length  # Body data size in byte
-            # --- Body data (serialized data is preferred): array of byte --- 
-            # Note: 
+            # --- Body data (serialized data is preferred): array of byte ---
+            # Note:
             #   - In Python: "byte" means bytes object
             #   - In C++   : "byte" means uint8_t type
-            byte[] body_data        
+            byte[] body_data
             ```
 
     * Import message definition
