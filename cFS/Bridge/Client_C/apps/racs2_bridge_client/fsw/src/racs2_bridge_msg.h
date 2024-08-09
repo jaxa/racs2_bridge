@@ -7,7 +7,7 @@
 #define BRIDGE_HEADER_LNGTH   32
 #define BODY_DATA_MAX_LNGTH   128
 
-typedef struct 
+typedef struct
 {
     uint8              header[BRIDGE_HEADER_LNGTH];
     uint8              body_data[BODY_DATA_MAX_LNGTH];
