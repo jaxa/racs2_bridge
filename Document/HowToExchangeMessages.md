@@ -70,23 +70,23 @@
 
         ```
         # define message
-		msg = RACS2UserMsg()
+        msg = RACS2UserMsg()
 
-		# define message body
-		msg_body = RACS2Bridge_std_msgs()
-		msg_body.string_data = 'Message S2C : %d' % self.i
+        # define message body
+        msg_body = RACS2Bridge_std_msgs()
+        msg_body.string_data = 'Message S2C : %d' % self.i
 
-		# serialize message data and fill message body 
-		serialized_msg_body = msg_body.SerializeToString()
-		for i in range(len(serialized_msg_body)):
-			msg.body_data.append(serialized_msg_body[i:i+1])
+        # serialize message data and fill message body 
+        serialized_msg_body = msg_body.SerializeToString()
+        for i in range(len(serialized_msg_body)):
+            msg.body_data.append(serialized_msg_body[i:i+1])
 
-  		# fill message header
-		msg.cfs_message_id = 0x1894
-		msg.body_data_length = len(msg.body_data)
-		self.publisher_.publish(msg)
-		self.get_logger().info( 'Publishing: [/RACS2Bridge] [%s]' % msg_body.string_data )
-		self.i += 1
+        # fill message header
+        msg.cfs_message_id = 0x1894
+        msg.body_data_length = len(msg.body_data)
+        self.publisher_.publish(msg)
+        self.get_logger().info( 'Publishing: [/RACS2Bridge] [%s]' % msg_body.string_data )
+        self.i += 1
         ```
 
 
@@ -283,9 +283,9 @@
 
         ```
         self.subscription = self.create_subscription(
-			RACS2UserMsg,
-			'/Recv/RACS2Bridge',
-			self.listener_callback,
-			10)
+            RACS2UserMsg,
+            '/Recv/RACS2Bridge',
+            self.listener_callback,
+            10)
         ```
 
