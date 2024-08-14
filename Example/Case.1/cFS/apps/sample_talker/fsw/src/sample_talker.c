@@ -53,7 +53,7 @@ void SAMPLE_TALKER_Main( void )
 
         // /* Pend on receipt of command packet -- timeout set to 500 millisecs */
         // status = CFE_SB_RcvMsg(&SAMPLE_TALKER_MsgPtr, SAMPLE_TALKER_CommandPipe, 500);
-        
+
         CFE_ES_PerfLogEntry(SAMPLE_APP_PERF_ID);
 
         // if (status == CFE_SUCCESS)
@@ -65,7 +65,7 @@ void SAMPLE_TALKER_Main( void )
         // send message
         // set topic name
         strcpy(RACS2_UserMsgPkt.ros2_topic_name, "/Recv/RACS2Bridge");
-        // define serialized body data 
+        // define serialized body data
         void *buffer;
         int len=0;
         RACS2BridgeStdMsgs *message;
@@ -77,7 +77,7 @@ void SAMPLE_TALKER_Main( void )
         message->string_data = (char *)malloc(sizeof(string_length));
         OS_printf("SAMPLE_TALKER: [Send][MsgID=0x%x][%s]\n", RACS2_BRIDGE_MID, buf);
         strncpy(message->string_data, buf, string_length);
-      
+
         len = racs2_bridge_std_msgs__get_packed_size(message);
         buffer=malloc(len);
         racs2_bridge_std_msgs__pack(message, buffer);
@@ -90,14 +90,14 @@ void SAMPLE_TALKER_Main( void )
         // send data
         CFE_SB_TimeStampMsg((CFE_SB_Msg_t *) &RACS2_UserMsgPkt);
         status = CFE_SB_SendMsg((CFE_SB_Msg_t *) &RACS2_UserMsgPkt);
-        // OS_printf("SAMPLE_TALKER: Sent message, MID = [0x%x], sample_command_count = %d\n", 
+        // OS_printf("SAMPLE_TALKER: Sent message, MID = [0x%x], sample_command_count = %d\n",
         //     CFE_SB_GetMsgId((CFE_SB_MsgPtr_t) &RACS2_UserMsgPkt),
         //     RACS2_UserMsgPkt.sample_command_count
         //     );
         if (status != CFE_SUCCESS) {
             OS_printf("SAMPLE_TALKER: Error: sending is failed. status = 0x%x\n", status);
         }
-        
+
         free(buffer);
         free(message->string_data);
         free(message);
@@ -124,7 +124,7 @@ void SAMPLE_TAKLKER_Init(void)
 
     /*
     ** Register the events
-    */ 
+    */
     CFE_EVS_Register(SAMPLE_EventFilters,
                      sizeof(SAMPLE_EventFilters)/sizeof(CFE_EVS_BinFilter_t),
                      CFE_EVS_EventFilter_BINARY);
@@ -140,10 +140,10 @@ void SAMPLE_TAKLKER_Init(void)
     CFE_EVS_SendEvent (SAMPLE_STARTUP_INF_EID, CFE_EVS_EventType_INFORMATION,
                "SAMPLE_TALKER App Initialized. Version %d.%d.%d.%d",
                 SAMPLE_APP_MAJOR_VERSION,
-                SAMPLE_APP_MINOR_VERSION, 
-                SAMPLE_APP_REVISION, 
+                SAMPLE_APP_MINOR_VERSION,
+                SAMPLE_APP_REVISION,
                 SAMPLE_APP_MISSION_REV);
-                
+
 } /* End of SAMPLE_TAKLKER_Init() */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
@@ -159,7 +159,7 @@ void SAMPLE_TALKER_ProcessCommandPacket(void)
     CFE_SB_MsgId_t  MsgId;
 
     MsgId = CFE_SB_GetMsgId(SAMPLE_TALKER_MsgPtr);
-    
+
     switch (MsgId)
     {
         case SAMPLE_TALKER_CMD_MID:
@@ -258,7 +258,7 @@ void SAMPLE_TALKER_ResetCounters(void)
 /*                                                                            */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
 bool SAMPLE_TALKER_VerifyCmdLength(CFE_SB_MsgPtr_t msg, uint16 ExpectedLength)
-{     
+{
     bool result = true;
 
     uint16 ActualLength = CFE_SB_GetTotalMsgLength(msg);

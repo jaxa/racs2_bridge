@@ -1,4 +1,4 @@
-# RACS2 (ROS and cFS System 2) Example - Case.1 
+# RACS2 (ROS and cFS System 2) Example - Case.1
 
 ## Overview
 
@@ -17,7 +17,7 @@ This file contains a description of the RACS2 Example. The following movements c
 - cFS/
   - apps/sample_talker
     - The Example Publisher for cFS.
-  - sample_defs 
+  - sample_defs
     - The Example build settings for cFS.
 
 ## Setup

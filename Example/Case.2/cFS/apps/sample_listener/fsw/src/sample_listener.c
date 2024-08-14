@@ -54,7 +54,7 @@ void SAMPLE_LISTENER_Main( void )
 
         /* Pend on receipt of command packet -- timeout set to 500 millisecs */
         status = CFE_SB_RcvMsg(&RACS2_UserMsgPkt_Ptr, SAMPLE_LISTENER_CommandPipe, 1000);
-        
+
         CFE_ES_PerfLogEntry(SAMPLE_APP_PERF_ID);
 
         if (status == CFE_SUCCESS)
@@ -88,7 +88,7 @@ void SAMPLE_LISTENER_Init(void)
 
     /*
     ** Register the events
-    */ 
+    */
     CFE_EVS_Register(SAMPLE_EventFilters,
                      sizeof(SAMPLE_EventFilters)/sizeof(CFE_EVS_BinFilter_t),
                      CFE_EVS_EventFilter_BINARY);
@@ -116,10 +116,10 @@ void SAMPLE_LISTENER_Init(void)
     CFE_EVS_SendEvent (SAMPLE_STARTUP_INF_EID, CFE_EVS_EventType_INFORMATION,
                "SAMPLE_LISTENER App Initialized. Version %d.%d.%d.%d",
                 SAMPLE_APP_MAJOR_VERSION,
-                SAMPLE_APP_MINOR_VERSION, 
-                SAMPLE_APP_REVISION, 
+                SAMPLE_APP_MINOR_VERSION,
+                SAMPLE_APP_REVISION,
                 SAMPLE_APP_MISSION_REV);
-                
+
 } /* End of SAMPLE_LISTENER_Init() */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
@@ -151,12 +151,12 @@ void SAMPLE_LISTENER_ProcessCommandPacket(void)
 
         case SAMPLE_LISTENER_MID:
             tmpPtr = (racs2_user_msg_t*) RACS2_UserMsgPkt_Ptr;
-            OS_printf("SAMPLE_LISTENER: received sample message from talker, MID = [0x%x], Msg len = %d.\n", 
+            OS_printf("SAMPLE_LISTENER: received sample message from talker, MID = [0x%x], Msg len = %d.\n",
                 MsgId,
                 // *(tmpPtr+CFE_SB_TLM_HDR_SIZE+ROS2_TOPIC_NAME_LNGTH+1)
                 tmpPtr->body_data_length
                 );
-            OS_printf("SAMPLE_LISTENER: received sample message from talker, MID = [0x%x].\n", 
+            OS_printf("SAMPLE_LISTENER: received sample message from talker, MID = [0x%x].\n",
                 MsgId
             );
             char buffer[1024];
@@ -178,7 +178,7 @@ void SAMPLE_LISTENER_ProcessCommandPacket(void)
             {
                 OS_printf("SAMPLE_LISTENER: data is empty\n");
             }
-                
+
             racs2_bridge_std_msgs__free_unpacked(message, NULL);
             break;
 
@@ -271,7 +271,7 @@ void SAMPLE_LISTENER_ResetCounters(void)
 /*                                                                            */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
 bool SAMPLE_LISTENER_VerifyCmdLength(CFE_SB_MsgPtr_t msg, uint16 ExpectedLength)
-{     
+{
     bool result = true;
 
     uint16 ActualLength = CFE_SB_GetTotalMsgLength(msg);
