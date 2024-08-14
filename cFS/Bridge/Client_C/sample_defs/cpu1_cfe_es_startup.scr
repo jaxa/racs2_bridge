@@ -17,17 +17,17 @@ CFE_APP, /cf/racs2_bridge_client.so,  RACS2_BRIDGE_CLIENT_Main,  RACS2_BRIDGE_CL
 ! 7. Load Address     -- This is the Optional Load Address for the App or Library. Currently not implemented
 !                        so keep it at 0x0.
 ! 8. Exception Action -- This is the Action the cFE should take if the App has an exception.
-!                        0        = Just restart the Application 
+!                        0        = Just restart the Application
 !                        Non-Zero = Do a cFE Processor Reset
 !
 ! Other  Notes:
 ! 1. The software will not try to parse anything after the first '!' character it sees. That
 !    is the End of File marker.
-! 2. Common Application file extensions: 
+! 2. Common Application file extensions:
 !    Linux = .so  ( ci.so )
 !    OS X  = .bundle  ( ci.bundle )
 !    Cygwin = .dll ( ci.dll )
 !    vxWorks = .o ( ci.o )
 !    RTEMS with S-record Loader = .s3r ( ci.s3r )
 !    RTEMS with CEXP Loader = .o ( ci.o )
- 
+

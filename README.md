@@ -38,7 +38,7 @@ This project is under the Apache 2.0 license. See LICENSE text file.
   - Ubuntu 22.04 LTS
 - ROS2 :
   - "ros-humble" package.
-- cFS : 
+- cFS :
   - [cFE 6.7.0a](https://github.com/nasa/cFS/releases/tag/v6.7.0a)
   - [OSAL v5.0.0](https://github.com/nasa/osal/releases/tag/v5.0.0)
 
@@ -89,7 +89,7 @@ This project is under the Apache 2.0 license. See LICENSE text file.
   git clone https://github.com/jaxa/racs2_bridge.git
   ```
 
-- Preparation of execution environment on the cFS side.  
+- Preparation of execution environment on the cFS side.
   - If the cFS version is not 6.7.0a, go to the top of the cFS project directory and do the following:
     ```
     git checkout v6.7.0a
@@ -121,7 +121,7 @@ This project is under the Apache 2.0 license. See LICENSE text file.
     make install
     ```
 
-- Preparation of execution environment on the ROS2 side.   
+- Preparation of execution environment on the ROS2 side.
   - Bridge node placement in the ROS2 execution environment.
     ```
     cp -pr racs2_bridge/ROS2/Bridge/Server_Python/bridge_py_s [ROS2 project path]/src/
@@ -143,7 +143,7 @@ This project is under the Apache 2.0 license. See LICENSE text file.
   cd [cFS project path]/build/exe/cpu1
   ./core-cpu1
   ```
-  
+
 - Start the ROS2 publishers and subscribers.
 
 - Start the cFS publishers and subscribers.
@@ -155,12 +155,12 @@ This project is under the Apache 2.0 license. See LICENSE text file.
   - wss_uri  -> HostName or IP Address. The type is String.
   - wss_port -> Port Number. The type is Integer.
 
-## Params for cFS 
+## Params for cFS
 
 - Specify startup parameters in txt format. The name of the file describing the parameters is `racs2_bridge_config.txt`.
 - Parameters Details:
-  - wss_uri  -> HostName or IP Address. 
-  - wss_port -> Port Number. 
+  - wss_uri  -> HostName or IP Address.
+  - wss_port -> Port Number.
 
 ## About Example
 
@@ -170,7 +170,7 @@ This project is under the Apache 2.0 license. See LICENSE text file.
 
 - See `Document/HowToExchangeMessages.md`.
 
-## Reference 
+## Reference
 
 * [Hiroki Kato, et al. "ROS and cFS System (RACS): Easing Space Robotic Development ~post-opensource activities and ROS2 integration~" Flight Software Workshop 2021.](https://drive.google.com/file/d/11L48doT_pRNs7R0hdChPALqJO849TvV2/view?usp=drive_web)
 

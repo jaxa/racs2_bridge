@@ -17,7 +17,7 @@ This file contains a description of the RACS2 Example. The following movements c
 - cFS/
   - apps/sample_listener
     - The Example Subscriber for cFS.
-  - sample_defs 
+  - sample_defs
     - The Example build settings for cFS.
 
 ## Setup
