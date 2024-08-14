@@ -35,8 +35,8 @@ static CFE_EVS_BinFilter_t  SAMPLE_EventFilters[] =
 
 pthread_mutex_t g_bridge_msg_pkt_mutex;
 pthread_mutex_t g_bridge_msg_flag_mutex;
-uint8 g_is_bridge_msg_sent = 0;
-char g_bridge_msg_pkt[BRIDGE_HEADER_LNGTH+BODY_DATA_MAX_LNGTH];
+uint8_t g_is_bridge_msg_sent = 0;
+uint8_t g_bridge_msg_pkt[BRIDGE_HEADER_LNGTH+BODY_DATA_MAX_LNGTH];
 
 /* -- websocket settings -------- */
 #include <libwebsockets.h>
@@ -52,7 +52,7 @@ enum protocols
 #define EXAMPLE_RX_BUFFER_BYTES (256)
 #define RACS2_BRIDGE_HEADER_LENGTH 32
 #define RACS2_BRIDGE_DEST_MSGID_NUM 16
-uint8 registerd_msgid_num = 0;
+uint8_t registerd_msgid_num = 0;
 uint16 dest_message_id_list[RACS2_BRIDGE_DEST_MSGID_NUM] = {0};
 
 static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
@@ -95,7 +95,7 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
             RACS2_UserMsgPkt.body_data_length = body_data_length;
             OS_printf("RACS2_BRIDGE_CLIENT: body data length : %d\n", body_data_length);
             // Copy body data
-            strncpy(RACS2_UserMsgPkt.body_data, (char*)in + RACS2_BRIDGE_HEADER_LENGTH, body_data_length);
+            memcpy(RACS2_UserMsgPkt.body_data, (uint8_t*)in + RACS2_BRIDGE_HEADER_LENGTH, body_data_length);
             // Send message
             CFE_SB_TimeStampMsg((CFE_SB_Msg_t *) &RACS2_UserMsgPkt);
             int32 status = CFE_SB_SendMsg((CFE_SB_Msg_t *) &RACS2_UserMsgPkt);
@@ -117,14 +117,10 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
         {
             lwsl_user( "case LWS_CALLBACK_CLIENT_WRITEABLE: \n" ) ;
 
-            // unsigned char buf[ LWS_SEND_BUFFER_PRE_PADDING + EXAMPLE_RX_BUFFER_BYTES + LWS_SEND_BUFFER_POST_PADDING];
-            // unsigned char *p = &buf[ LWS_SEND_BUFFER_PRE_PADDING ] ;
-            // size_t n = sprintf( (char *)p, "Hello, from Client" );
-            // lws_write( wsi, p, n, LWS_WRITE_TEXT );
-            if (g_is_bridge_msg_sent)
+           if (g_is_bridge_msg_sent)
             {
                 pthread_mutex_lock(&g_bridge_msg_flag_mutex);
-                lws_write( wsi, g_bridge_msg_pkt, BRIDGE_HEADER_LNGTH+BODY_DATA_MAX_LNGTH, LWS_WRITE_TEXT );
+                lws_write( wsi, g_bridge_msg_pkt, BRIDGE_HEADER_LNGTH+BODY_DATA_MAX_LNGTH, LWS_WRITE_BINARY );
                 pthread_mutex_unlock(&g_bridge_msg_flag_mutex);
             }
             pthread_mutex_lock(&g_bridge_msg_flag_mutex);
@@ -368,9 +364,9 @@ void RACS2_BRIDGE_CLIENT_ProcessCommandPacket(void)
             pthread_mutex_lock(&g_bridge_msg_flag_mutex);
             memset(&g_bridge_msg_pkt, 0, ROS2_TOPIC_NAME_LNGTH+BODY_DATA_MAX_LNGTH);
             // set topic name data
-            strcpy(&g_bridge_msg_pkt, &tmp_ptr->ros2_topic_name);
+            memcpy(&g_bridge_msg_pkt[0], (uint8_t*)&tmp_ptr->ros2_topic_name, ROS2_TOPIC_NAME_LNGTH);
             // set body data
-            strncpy(&g_bridge_msg_pkt[BRIDGE_HEADER_LNGTH], &tmp_ptr->body_data, tmp_ptr->body_data_length);
+            memcpy(&g_bridge_msg_pkt[BRIDGE_HEADER_LNGTH], (uint8_t*)&tmp_ptr->body_data, tmp_ptr->body_data_length);
             g_is_bridge_msg_sent = 1;
             pthread_mutex_unlock(&g_bridge_msg_pkt_mutex);
             pthread_mutex_unlock(&g_bridge_msg_flag_mutex);
