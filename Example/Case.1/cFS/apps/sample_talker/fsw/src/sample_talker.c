@@ -74,7 +74,7 @@ void SAMPLE_TALKER_Main( void )
         int string_length = 22;
         char* buf[32];
         sprintf(buf, "Message To ROS2 :%5d", count);
-        message->string_data = (char *)malloc(sizeof(string_length));
+        message->string_data = (char *)malloc(string_length * sizeof(char));
         OS_printf("SAMPLE_TALKER: [Send][MsgID=0x%x][%s]\n", RACS2_BRIDGE_MID, buf);
         strncpy(message->string_data, buf, string_length);
 
