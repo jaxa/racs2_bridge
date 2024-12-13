@@ -172,5 +172,5 @@ This project is under the Apache 2.0 license. See LICENSE text file.
 
 ## Reference
 
-* [Hiroki Kato, et al. "ROS and cFS System (RACS): Easing Space Robotic Development ~post-opensource activities and ROS2 integration~" Flight Software Workshop 2021.](https://drive.google.com/file/d/11L48doT_pRNs7R0hdChPALqJO849TvV2/view?usp=drive_web)
+* [Hiroki Kato (JAXA) and Tatsuhiko Saito (Systems Engineering Consultants (SEC)). “RACS2: the ROS2 and cFS System, launched” Flight Software Workshop 2023 in March 2023](https://drive.google.com/file/d/1VBsiUEW6Z8pG8LvbM7lEyZMRMz9w-sjX/view)
 
