@@ -1,4 +1,4 @@
-# RACS2 (ROS and cFS System 2) Bridge
+# RACS2 (ROS2 and cFS System) Bridge
 
 ## Overview
 
