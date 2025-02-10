@@ -89,45 +89,37 @@ async def wss_send(websocket, message):
     await websocket.send(message)
 
 
-async def wss_recv():
+async def wss_recv(websocket):
     global gWebSocket
+    gWebSocket = websocket
+
     if (gWebSocket is None):
         gLogger.error("WebSocket is error.")
         return
-    websocket = gWebSocket
-    while True:
-        try:
-            recv_message = await websocket.recv()
+    try:
+        async for recv_message in websocket:
             gLogger.info(f'WssRecv: {recv_message}')
             topic_name = recv_message[0:32].decode()
             gLogger.info(f"topic name = {topic_name}")
+
+            if gNode is None:
+                gLogger.warning("Node is not initialized yet, skipping message")
+                continue
             gNode.register_publisher(topic_name)
             publish_message = RACS2UserMsg()
             publish_message.body_data_length = len(recv_message) - 32
             bytes_list = [bytes([elem]) for elem in recv_message[32:]]
             publish_message.body_data = bytes_list
-            if gNode is not None:
-                gNode.do_publish(topic_name, publish_message)
-        except websockets.ConnectionClosedOK:
-            gLogger.error("Error: websockets")
-            break
-
-
-async def wss_accept(websocket, path):
-    gLogger.info('wss_accept | path: %s' % path)
-    global gWebSocket
-    gWebSocket = websocket
-
-    async for message in websocket:
-        gLogger.info('Recv: %s' % message)
-        # for confirmation
-        # await websocket.send( "server accepted.")
-        await wss_recv()
+            gNode.do_publish(topic_name, publish_message)
+    except websockets.ConnectionClosedOK:
+        gLogger.warning("Websocket closed properly.")
+    except websockets.ConnectionClosedError as e:
+        gLogger.error(f"Websocket closed with error: {e}")
 
 
 async def wss_run(aNode):
     gLogger.info('wss_run')
-    async with websockets.serve(wss_accept, aNode.wss_uri, aNode.wss_port):
+    async with websockets.serve(wss_recv, aNode.wss_uri, aNode.wss_port):
         await asyncio.Future()
 
 

@@ -34,8 +34,7 @@ static CFE_EVS_BinFilter_t  SAMPLE_EventFilters[] =
        };
 
 pthread_mutex_t g_bridge_msg_pkt_mutex;
-pthread_mutex_t g_bridge_msg_flag_mutex;
-uint8_t g_is_bridge_msg_sent = 0;
+uint8_t g_should_send_msg_pkt = 0;
 uint8_t g_bridge_msg_pkt[BRIDGE_HEADER_LNGTH+BODY_DATA_MAX_LNGTH];
 
 /* -- websocket settings -------- */
@@ -70,7 +69,7 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
         case LWS_CALLBACK_CLIENT_RECEIVE:
             lwsl_user( "case LWS_CALLBACK_CLIENT_RECEIVE: \n" ) ;
             lwsl_user( "[Recv]: %s\n", (char*)in ) ;
-            lwsl_user( "[Recv]: data len = %d\n", len ) ;
+            lwsl_user( "[Recv]: data len = %ld\n", len ) ;
 
             // === send message =========================
             char *hello = "Hello";
@@ -117,15 +116,13 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
         {
             lwsl_user( "case LWS_CALLBACK_CLIENT_WRITEABLE: \n" ) ;
 
-           if (g_is_bridge_msg_sent)
+            pthread_mutex_lock(&g_bridge_msg_pkt_mutex);
+            if (g_should_send_msg_pkt)
             {
-                pthread_mutex_lock(&g_bridge_msg_flag_mutex);
-                lws_write( wsi, g_bridge_msg_pkt, BRIDGE_HEADER_LNGTH+BODY_DATA_MAX_LNGTH, LWS_WRITE_BINARY );
-                pthread_mutex_unlock(&g_bridge_msg_flag_mutex);
+              lws_write( wsi, g_bridge_msg_pkt, BRIDGE_HEADER_LNGTH+BODY_DATA_MAX_LNGTH, LWS_WRITE_BINARY );
+              g_should_send_msg_pkt = 0;
             }
-            pthread_mutex_lock(&g_bridge_msg_flag_mutex);
-            g_is_bridge_msg_sent = 0;
-            pthread_mutex_unlock(&g_bridge_msg_flag_mutex);
+            pthread_mutex_unlock(&g_bridge_msg_pkt_mutex);
             break;
         }
 
@@ -361,15 +358,14 @@ void RACS2_BRIDGE_CLIENT_ProcessCommandPacket(void)
             OS_printf("RACS2_BRIDGE_CLIENT: body_data_length = %d\n", tmp_ptr->body_data_length);
 
             pthread_mutex_lock(&g_bridge_msg_pkt_mutex);
-            pthread_mutex_lock(&g_bridge_msg_flag_mutex);
+            // Clear the message
             memset(&g_bridge_msg_pkt, 0, ROS2_TOPIC_NAME_LNGTH+BODY_DATA_MAX_LNGTH);
             // set topic name data
             memcpy(&g_bridge_msg_pkt[0], (uint8_t*)&tmp_ptr->ros2_topic_name, ROS2_TOPIC_NAME_LNGTH);
             // set body data
             memcpy(&g_bridge_msg_pkt[BRIDGE_HEADER_LNGTH], (uint8_t*)&tmp_ptr->body_data, tmp_ptr->body_data_length);
-            g_is_bridge_msg_sent = 1;
+            g_should_send_msg_pkt = 1;
             pthread_mutex_unlock(&g_bridge_msg_pkt_mutex);
-            pthread_mutex_unlock(&g_bridge_msg_flag_mutex);
 
             break;
 
