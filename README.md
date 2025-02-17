@@ -48,12 +48,11 @@ This project is under the Apache 2.0 license. See LICENSE text file.
 ### Premise
 
 - Assuming to work in the "~/racs2_ws" directory.
+
       ```
       mkdir ~/racs2_ws
       mkdir ~/racs2_ws/ros2_ws
-      cd ~/racs2_ws  
       ```
-
 
 - ROS2 and cFS shall be installed on the OS.
   - See below.
@@ -62,6 +61,7 @@ This project is under the Apache 2.0 license. See LICENSE text file.
     - [cFS Installation](https://github.com/nasa/cFS)
       Do the following:
       ```
+      cd ~/racs2_ws  
       git clone https://github.com/nasa/cFS.git
       cd cFS
       git checkout v6.7.0a
