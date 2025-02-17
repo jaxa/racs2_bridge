@@ -40,12 +40,20 @@ This project is under the Apache 2.0 license. See LICENSE text file.
   - "ros-humble" package.
 - cFS :
   - [cFE 6.7.0a](https://github.com/nasa/cFS/releases/tag/v6.7.0a)
-  - [OSAL v5.0.0](https://github.com/nasa/osal/releases/tag/v5.0.0)
+  - [OSAL v5.0.0](https://github.com/nasa/osal/releases/tag/v5.0.0) (included in cFE 6.7.0a)
 
 
 ## Setup
 
 ### Premise
+
+- Assuming to work in the "~/racs2_ws" directory.
+      ```
+      mkdir ~/racs2_ws
+      mkdir ~/racs2_ws/ros2_ws
+      cd ~/racs2_ws  
+      ```
+
 
 - ROS2 and cFS shall be installed on the OS.
   - See below.
@@ -55,14 +63,13 @@ This project is under the Apache 2.0 license. See LICENSE text file.
       Do the following:
       ```
       git clone https://github.com/nasa/cFS.git
-      cd [cFS project path]
+      cd cFS
+      git checkout v6.7.0a
       git submodule init
       git submodule update
       ```
 
-    - [OSAL Installation](https://github.com/nasa/osal)
-
-### Procedure
+### Procedure for initial build 
 
 - Preparing for WebSocket.
   - C/C++ :
@@ -71,7 +78,7 @@ This project is under the Apache 2.0 license. See LICENSE text file.
     ```
   - Python :
     ```
-    pip install websockets
+    pip install websockets==12.0
     ```
 
 - Preparing for Protocol Buffers.
@@ -81,41 +88,37 @@ This project is under the Apache 2.0 license. See LICENSE text file.
     ```
   - Python :
     ```
-    pip install protobuf
+    pip install protobuf==3.20.0 
     ```
 
 - git clone the RACS2 Bridge.
   ```
-  git clone https://github.com/jaxa/racs2_bridge.git
+  cd ~/racs2_ws
+  git clone https://github.com/jaxa/racs2_bridge.git -b v1.1
   ```
-
-- Preparation of execution environment on the cFS side.
-  - If the cFS version is not 6.7.0a, go to the top of the cFS project directory and do the following:
-    ```
-    git checkout v6.7.0a
-    git submodule init
-    git submodule update
-    ```
 
   - Go to the top of the cFS project directory and execute the following build command
     ```
+    cd ~/racs2_ws/cFS
     cp cfe/cmake/Makefile.sample Makefile
     cp -r cfe/cmake/sample_defs sample_defs
     ```
 
   - Bridge application placement in the cFS execution environment.
     ```
-    cp -pr racs2_bridge/cFS/Bridge/Client_C/apps/racs2_bridge_client [cFS project path]/apps/
-    cp -pr racs2_bridge/cFS/Bridge/Client_C/sample_defs/* [cFS project path]/sample_defs/
+    cd ~/racs2_ws/
+    cp -pr racs2_bridge/cFS/Bridge/Client_C/apps/racs2_bridge_client cFS/apps/
+    cp -pr racs2_bridge/cFS/Bridge/Client_C/sample_defs/* cFS/sample_defs/
     ```
 
-  - Edit L.205 of "[cFS project path]/sample_defs/default_osconfig.h" as follows,
+  - Edit L.205 of "cFS/sample_defs/default_osconfig.h" as follows,
     ```
     #define OSAL_DEBUG_PERMISSIVE_MODE
     ```
 
   - Go to the top of the cFS project directory and execute the following build command
     ```
+    cd ~/racs2_ws/cFS
     make prep
     make
     make install
@@ -124,29 +127,20 @@ This project is under the Apache 2.0 license. See LICENSE text file.
 - Preparation of execution environment on the ROS2 side.
   - Bridge node placement in the ROS2 execution environment.
     ```
-    cp -pr racs2_bridge/ROS2/Bridge/Server_Python/bridge_py_s [ROS2 project path]/src/
+    cd ~/racs2_ws/
+    cp -pr racs2_bridge/ROS2/Bridge/Server_Python/bridge_py_s ros2_ws/src/
     ```
   - Go to the top of the ROS2 project directory and execute the following build command
     ```
+    cd ros2_ws/
     colcon build --symlink-install
     ```
 
-- Start the ROS2 node.
-  ```
-  cd [ROS2 project path]
-  source install/setup.bash
-  ros2 run bridge_py_s bridge_py_s_node  --ros-args --params-file ./src/bridge_py_s/config/params.yaml
-  ```
+After build, you successfully installed RACS2.
 
-- Start the cFS application.
-  ```
-  cd [cFS project path]/build/exe/cpu1
-  ./core-cpu1
-  ```
+### Procedure for use
 
-- Start the ROS2 publishers and subscribers.
-
-- Start the cFS publishers and subscribers.
+For detailed procedure, please see the [example](https://github.com/jaxa/racs2_bridge/tree/main/Example). 
 
 ## Params for ROS2
 
@@ -161,10 +155,6 @@ This project is under the Apache 2.0 license. See LICENSE text file.
 - Parameters Details:
   - wss_uri  -> HostName or IP Address.
   - wss_port -> Port Number.
-
-## About Example
-
-- See `Example/README.md`.
 
 ## How to exchange messages
 
