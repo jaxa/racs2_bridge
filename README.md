@@ -48,7 +48,6 @@ This project is under the Apache 2.0 license. See LICENSE text file.
 ### Premise
 
 - Assuming to work in the "~/racs2_ws" directory.
-
       ```
       mkdir ~/racs2_ws
       mkdir ~/racs2_ws/ros2_ws
@@ -59,7 +58,6 @@ This project is under the Apache 2.0 license. See LICENSE text file.
     - [ROS2 Installation](https://docs.ros.org/en/foxy/Installation/Ubuntu-Install-Debians.html)
 
     - [cFS Installation](https://github.com/nasa/cFS)
-      Do the following:
       ```
       cd ~/racs2_ws  
       git clone https://github.com/nasa/cFS.git
@@ -136,11 +134,9 @@ This project is under the Apache 2.0 license. See LICENSE text file.
     colcon build --symlink-install
     ```
 
-After build, you successfully installed RACS2.
-
 ### Procedure for use
 
-For detailed procedure, please see the [example](https://github.com/jaxa/racs2_bridge/tree/main/Example). 
+It must be built separately for both cFS and ROS 2. For detailed procedure, please see the [example](https://github.com/jaxa/racs2_bridge/tree/main/Example). 
 
 ## Params for ROS2
 
