@@ -214,9 +214,6 @@ void RACS2_BRIDGE_CLIENT_Main( void )
             g_old = tv.tv_sec;
         }
 
-        lws_service( g_context, (0) );
-        // === EEE: For WebSocket =====================
-
         /* Pend on receipt of command packet -- timeout set to 500 millisecs */
         status = CFE_SB_RcvMsg(&RACS2_UserMsgPkt_Ptr, RACS2_BRIDGE_CLIENT_CommandPipe, 1000);
 
@@ -231,6 +228,8 @@ void RACS2_BRIDGE_CLIENT_Main( void )
             OS_printf("RACS2_BRIDGE_CLIENT: CFE_SB_RcvMsg failed, status = 0x%x\n", status);
         }
 
+        lws_service( g_context, (0) );
+        // === EEE: For WebSocket =====================
     }
 
     CFE_ES_ExitApp(RunStatus);
