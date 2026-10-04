@@ -115,4 +115,5 @@ This file contains a description of the RACS2 Example. The following movements c
 ## How to exchange messages
 
 - See `Document/HowToExchangeMessages.md`.
+- Case.2 uses the common binary WebSocket format in `Document/WebSocketProtocol.md`: a 32-byte header containing the cFS destination message ID, a 4-byte big-endian body length, and exactly that many body bytes.
 

@@ -35,7 +35,8 @@ static CFE_EVS_BinFilter_t  SAMPLE_EventFilters[] =
 
 pthread_mutex_t g_bridge_msg_pkt_mutex;
 uint8_t g_should_send_msg_pkt = 0;
-uint8_t g_bridge_msg_pkt[BRIDGE_HEADER_LNGTH+BODY_DATA_MAX_LNGTH];
+uint8_t g_bridge_msg_pkt[RACS2_BRIDGE_MSG_LNGTH];
+size_t g_bridge_msg_pkt_length = 0;
 
 /* -- websocket settings -------- */
 #include <libwebsockets.h>
@@ -49,10 +50,25 @@ enum protocols
 };
 
 #define EXAMPLE_RX_BUFFER_BYTES (256)
-#define RACS2_BRIDGE_HEADER_LENGTH 32
 #define RACS2_BRIDGE_DEST_MSGID_NUM 16
 uint8_t registerd_msgid_num = 0;
 uint16 dest_message_id_list[RACS2_BRIDGE_DEST_MSGID_NUM] = {0};
+
+static uint32 RACS2_BRIDGE_ReadBodyDataLength(const uint8 *field)
+{
+    return ((uint32)field[0] << 24) |
+           ((uint32)field[1] << 16) |
+           ((uint32)field[2] << 8) |
+           (uint32)field[3];
+}
+
+static void RACS2_BRIDGE_WriteBodyDataLength(uint8 *field, uint32 body_data_length)
+{
+    field[0] = (uint8)(body_data_length >> 24);
+    field[1] = (uint8)(body_data_length >> 16);
+    field[2] = (uint8)(body_data_length >> 8);
+    field[3] = (uint8)body_data_length;
+}
 
 static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
 {
@@ -67,20 +83,36 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
             break;
 
         case LWS_CALLBACK_CLIENT_RECEIVE:
+        {
+            uint8 *recv_data = (uint8 *)in;
+            uint32 body_data_length;
+
             lwsl_user( "case LWS_CALLBACK_CLIENT_RECEIVE: \n" ) ;
-            lwsl_user( "[Recv]: %s\n", (char*)in ) ;
             lwsl_user( "[Recv]: data len = %ld\n", len ) ;
 
-            // === send message =========================
-            char *hello = "Hello";
-            if (!strncmp((char*)in, hello, 1))
+            if (len == 5 && memcmp(in, "Hello", 5) == 0)
             {
-                // OS_printf("[Recv]: %s\n", (char*)in);
                 break;
             }
+
+            if (len < BODY_DATA_OFFSET)
+            {
+                OS_printf("RACS2_BRIDGE_CLIENT: invalid websocket packet length: %lu\n", (unsigned long)len);
+                break;
+            }
+
+            body_data_length = RACS2_BRIDGE_ReadBodyDataLength(recv_data + BRIDGE_HEADER_LNGTH);
+            if (body_data_length > BODY_DATA_MAX_LNGTH ||
+                len != (size_t)(BODY_DATA_OFFSET + body_data_length))
+            {
+                OS_printf("RACS2_BRIDGE_CLIENT: invalid websocket body length: declared=%lu, packet=%lu\n",
+                          (unsigned long)body_data_length, (unsigned long)len);
+                break;
+            }
+
             // Get message ID from header
-            uint16_t id_seg1 = ((uint8_t*)in)[0];
-            uint16_t id_seg2 = ((uint8_t*)in)[1];
+            uint16_t id_seg1 = recv_data[0];
+            uint16_t id_seg2 = recv_data[1];
             uint16_t message_id = id_seg1 << 8 | id_seg2;
             OS_printf("RACS2_BRIDGE_CLIENT: dest cFS message ID : 0x%x\n", message_id);
             // if (is_new_msgid(message_id)) {
@@ -89,12 +121,9 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
             //     OS_printf("RACS2_BRIDGE_CLIENT: CFE_SB_InitMsg for MsgId[%x]\n\n\n\n\n\n\n", message_id);
             // }
             CFE_SB_InitMsg(&RACS2_UserMsgPkt, message_id, RACS2_USER_MSG_LNGTH, true);
-            // Set body data length
-            uint8_t body_data_length = len - RACS2_BRIDGE_HEADER_LENGTH;
-            RACS2_UserMsgPkt.body_data_length = body_data_length;
-            OS_printf("RACS2_BRIDGE_CLIENT: body data length : %d\n", body_data_length);
-            // Copy body data
-            memcpy(RACS2_UserMsgPkt.body_data, (uint8_t*)in + RACS2_BRIDGE_HEADER_LENGTH, body_data_length);
+            RACS2_UserMsgPkt.body_data_length = (uint8)body_data_length;
+            OS_printf("RACS2_BRIDGE_CLIENT: body data length : %lu\n", (unsigned long)body_data_length);
+            memcpy(RACS2_UserMsgPkt.body_data, recv_data + BODY_DATA_OFFSET, body_data_length);
             // Send message
             CFE_SB_TimeStampMsg((CFE_SB_Msg_t *) &RACS2_UserMsgPkt);
             int32 status = CFE_SB_SendMsg((CFE_SB_Msg_t *) &RACS2_UserMsgPkt);
@@ -109,8 +138,8 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
                 OS_printf("RACS2_BRIDGE_CLIENT: Error: sending is failed. \n");
             }
 
-
             break;
+        }
 
         case LWS_CALLBACK_CLIENT_WRITEABLE:
         {
@@ -119,7 +148,7 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
             pthread_mutex_lock(&g_bridge_msg_pkt_mutex);
             if (g_should_send_msg_pkt)
             {
-              lws_write( wsi, g_bridge_msg_pkt, BRIDGE_HEADER_LNGTH+BODY_DATA_MAX_LNGTH, LWS_WRITE_BINARY );
+              lws_write( wsi, g_bridge_msg_pkt, g_bridge_msg_pkt_length, LWS_WRITE_BINARY );
               g_should_send_msg_pkt = 0;
             }
             pthread_mutex_unlock(&g_bridge_msg_pkt_mutex);
@@ -390,13 +419,25 @@ void RACS2_BRIDGE_CLIENT_ProcessCommandPacket(void)
             OS_printf("RACS2_BRIDGE_CLIENT: ros2_topic_name = %s\n", tmp_ptr->ros2_topic_name);
             OS_printf("RACS2_BRIDGE_CLIENT: body_data_length = %d\n", tmp_ptr->body_data_length);
 
+            if (tmp_ptr->body_data_length > BODY_DATA_MAX_LNGTH)
+            {
+                OS_printf("RACS2_BRIDGE_CLIENT: body data exceeds maximum length: %d\n",
+                          tmp_ptr->body_data_length);
+                break;
+            }
+
             pthread_mutex_lock(&g_bridge_msg_pkt_mutex);
             // Clear the message
-            memset(&g_bridge_msg_pkt, 0, ROS2_TOPIC_NAME_LNGTH+BODY_DATA_MAX_LNGTH);
+            memset(g_bridge_msg_pkt, 0, sizeof(g_bridge_msg_pkt));
             // set topic name data
             memcpy(&g_bridge_msg_pkt[0], (uint8_t*)&tmp_ptr->ros2_topic_name, ROS2_TOPIC_NAME_LNGTH);
+            // set body data length in network byte order
+            RACS2_BRIDGE_WriteBodyDataLength(g_bridge_msg_pkt + BRIDGE_HEADER_LNGTH,
+                                             tmp_ptr->body_data_length);
             // set body data
-            memcpy(&g_bridge_msg_pkt[BRIDGE_HEADER_LNGTH], (uint8_t*)&tmp_ptr->body_data, tmp_ptr->body_data_length);
+            memcpy(&g_bridge_msg_pkt[BODY_DATA_OFFSET], (uint8_t*)&tmp_ptr->body_data,
+                   tmp_ptr->body_data_length);
+            g_bridge_msg_pkt_length = BODY_DATA_OFFSET + tmp_ptr->body_data_length;
             g_should_send_msg_pkt = 1;
             pthread_mutex_unlock(&g_bridge_msg_pkt_mutex);
 

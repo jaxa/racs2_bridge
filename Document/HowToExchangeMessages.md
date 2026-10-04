@@ -1,5 +1,13 @@
 # How to convert messages
 
+## WebSocket transport format
+
+Both ROS2->cFS and cFS->ROS2 use the binary WebSocket packet format defined in `WebSocketProtocol.md`:
+
+`[32-byte header] + [4-byte big-endian body_data_length] + [body_data]`
+
+The WebSocket frame must contain exactly `36 + body_data_length` bytes, and `body_data_length` must not exceed 128. The application-side `body_data_length` fields shown below are converted to and from this 4-byte wire representation by the bridge.
+
 ## ROS2->cFS
 
 ### ROS2 side

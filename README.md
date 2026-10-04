@@ -155,6 +155,7 @@ It must be built separately for both cFS and ROS 2. For detailed procedure, plea
 ## How to exchange messages
 
 - See `Document/HowToExchangeMessages.md`.
+- The binary WebSocket packet format is defined in `Document/WebSocketProtocol.md`.
 
 ## Reference
 
