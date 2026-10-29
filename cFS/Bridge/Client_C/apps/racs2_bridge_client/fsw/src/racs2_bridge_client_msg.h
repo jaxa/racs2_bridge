@@ -13,7 +13,7 @@
 */
 typedef struct
 {
-   uint8    CmdHeader[CFE_SB_CMD_HDR_SIZE];
+   CFE_MSG_CommandHeader_t CmdHeader;
 
 } SAMPLE_NoArgsCmd_t;
 
@@ -23,12 +23,12 @@ typedef struct
 */
 typedef struct
 {
-    uint8              TlmHeader[CFE_SB_TLM_HDR_SIZE];
+    CFE_MSG_TelemetryHeader_t TlmHeader;
     uint8              sample_command_error_count;
     uint8              sample_command_count;
     uint8              spare[2];
 
-}   OS_PACK sample_hk_tlm_t  ;
+} sample_hk_tlm_t;
 
 #define SAMPLE_APP_HK_TLM_LNGTH   sizeof ( sample_hk_tlm_t )
 
@@ -38,12 +38,12 @@ typedef struct
 */
 typedef struct
 {
-    uint8              TlmHeader[CFE_SB_TLM_HDR_SIZE];
+    CFE_MSG_TelemetryHeader_t TlmHeader;
     uint8              sample_command_error_count;
     uint8              sample_command_count;
     char               char_arr[64];
 
-}   OS_PACK cfs_char_arr_msg_t  ;
+} cfs_char_arr_msg_t;
 
 #define CFS_CHAR_ARR_LNGTH   64
 #define CFS_CHAR_ARR_MSG_LNGTH   sizeof ( cfs_char_arr_msg_t )

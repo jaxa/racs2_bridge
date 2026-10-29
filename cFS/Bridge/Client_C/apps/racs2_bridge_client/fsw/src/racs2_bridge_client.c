@@ -1,536 +1,242 @@
-/*
-**   Include Files:
-*/
-
-#include "racs2_bridge_client.h"
-#include "racs2_bridge_client_perfids.h"
+/* SPDX-License-Identifier: Apache-2.0 */
+#include "cfe.h"
 #include "racs2_bridge_client_msgids.h"
-#include "racs2_bridge_client_msg.h"
 #include "racs2_user_msg.h"
-#include "racs2_bridge_msg.h"
-#include "racs2_bridge_client_events.h"
-#include "racs2_bridge_client_version.h"
-#include <pthread.h>
-
-/*
-** global data
-*/
-
-sample_hk_tlm_t    RACS2_BRIDGE_CLIENT_HkTelemetryPkt;
-sample_hk_tlm_t    SAMPLE_TalkerListenerPkt;
-CFE_SB_PipeId_t    RACS2_BRIDGE_CLIENT_CommandPipe;
-CFE_SB_MsgPtr_t    RACS2_BRIDGE_CLIENT_MsgPtr;
-racs2_user_msg_t   RACS2_UserMsgPkt;
-CFE_SB_MsgPtr_t    RACS2_UserMsgPkt_Ptr;
-char     wss_uri[16];
-uint16_t wss_port;
-
-static CFE_EVS_BinFilter_t  SAMPLE_EventFilters[] =
-       {  /* Event ID    mask */
-          {SAMPLE_STARTUP_INF_EID,       0x0000},
-          {SAMPLE_COMMAND_ERR_EID,       0x0000},
-          {SAMPLE_COMMANDNOP_INF_EID,    0x0000},
-          {SAMPLE_COMMANDRST_INF_EID,    0x0000},
-       };
-
-pthread_mutex_t g_bridge_msg_pkt_mutex;
-uint8_t g_should_send_msg_pkt = 0;
-uint8_t g_bridge_msg_pkt[BRIDGE_HEADER_LNGTH+BODY_DATA_MAX_LNGTH];
-
-/* -- websocket settings -------- */
 #include <libwebsockets.h>
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
-static struct lws *web_socket = NULL;
-static struct lws* g_wsi_ptr = NULL;
-enum protocols
+#define RACS2_QUEUE_DEPTH 32u
+typedef struct
 {
-    PROTOCOL_EXAMPLE = 0,
-    PROTOCOL_COUNT
-};
-
-#define EXAMPLE_RX_BUFFER_BYTES (256)
-#define RACS2_BRIDGE_HEADER_LENGTH 32
-#define RACS2_BRIDGE_DEST_MSGID_NUM 16
-uint8_t registerd_msgid_num = 0;
-uint16 dest_message_id_list[RACS2_BRIDGE_DEST_MSGID_NUM] = {0};
-
-static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
+    unsigned char bytes[LWS_PRE + RACS2_MESSAGE_MAX];
+    size_t size;
+} RACS2_Frame;
+static struct
 {
-    lwsl_user( "BBB: callback_example()\n" ) ;
-    g_wsi_ptr = wsi;
+    CFE_SB_PipeId_t pipe;
+    struct lws_context *context;
+    struct lws *connection;
+    lws_sorted_usec_list_t wakeup;
+    int connected;
+    char host[256];
+    int port;
+    time_t retry_at;
+    uint8_t rx[RACS2_MESSAGE_MAX];
+    size_t rx_size;
+    RACS2_Frame tx[RACS2_QUEUE_DEPTH];
+    unsigned int head;
+    unsigned int count;
+} Bridge;
 
-    switch( reason )
-    {
-        case LWS_CALLBACK_CLIENT_ESTABLISHED:
-            lwsl_user( "case LWS_CALLBACK_CLIENT_ESTABLISHED: \n" ) ;
-            lws_callback_on_writable( wsi );
-            break;
-
-        case LWS_CALLBACK_CLIENT_RECEIVE:
-            lwsl_user( "case LWS_CALLBACK_CLIENT_RECEIVE: \n" ) ;
-            lwsl_user( "[Recv]: %s\n", (char*)in ) ;
-            lwsl_user( "[Recv]: data len = %ld\n", len ) ;
-
-            // === send message =========================
-            char *hello = "Hello";
-            if (!strncmp((char*)in, hello, 1))
-            {
-                // OS_printf("[Recv]: %s\n", (char*)in);
-                break;
-            }
-            // Get message ID from header
-            uint16_t id_seg1 = ((uint8_t*)in)[0];
-            uint16_t id_seg2 = ((uint8_t*)in)[1];
-            uint16_t message_id = id_seg1 << 8 | id_seg2;
-            OS_printf("RACS2_BRIDGE_CLIENT: dest cFS message ID : 0x%x\n", message_id);
-            // if (is_new_msgid(message_id)) {
-            //     // CFE_SB_InitMsg(&RACS2_UserMsgPkt, RACS2_BRIDGE_MID, RACS2_USER_MSG_LNGTH, false);
-            //     CFE_SB_InitMsg(&RACS2_UserMsgPkt, message_id, RACS2_USER_MSG_LNGTH, true);
-            //     OS_printf("RACS2_BRIDGE_CLIENT: CFE_SB_InitMsg for MsgId[%x]\n\n\n\n\n\n\n", message_id);
-            // }
-            CFE_SB_InitMsg(&RACS2_UserMsgPkt, message_id, RACS2_USER_MSG_LNGTH, true);
-            // Set body data length
-            uint8_t body_data_length = len - RACS2_BRIDGE_HEADER_LENGTH;
-            RACS2_UserMsgPkt.body_data_length = body_data_length;
-            OS_printf("RACS2_BRIDGE_CLIENT: body data length : %d\n", body_data_length);
-            // Copy body data
-            memcpy(RACS2_UserMsgPkt.body_data, (uint8_t*)in + RACS2_BRIDGE_HEADER_LENGTH, body_data_length);
-            // Send message
-            CFE_SB_TimeStampMsg((CFE_SB_Msg_t *) &RACS2_UserMsgPkt);
-            int32 status = CFE_SB_SendMsg((CFE_SB_Msg_t *) &RACS2_UserMsgPkt);
-            // OS_printf("RACS2_BRIDGE_CLIENT: Sent message, MID = [0x%x], sample_command_count = %d\n",
-            //     CFE_SB_GetMsgId((CFE_SB_MsgPtr_t) &RACS2_UserMsgPkt),
-            //     RACS2_UserMsgPkt.sample_command_count
-            //     );
-            OS_printf("RACS2_BRIDGE_CLIENT: Sent message, MID = [0x%x]\n",
-                CFE_SB_GetMsgId((CFE_SB_MsgPtr_t) &RACS2_UserMsgPkt)
-            );
-            if (status != CFE_SUCCESS) {
-                OS_printf("RACS2_BRIDGE_CLIENT: Error: sending is failed. \n");
-            }
-
-
-            break;
-
-        case LWS_CALLBACK_CLIENT_WRITEABLE:
-        {
-            lwsl_user( "case LWS_CALLBACK_CLIENT_WRITEABLE: \n" ) ;
-
-            pthread_mutex_lock(&g_bridge_msg_pkt_mutex);
-            if (g_should_send_msg_pkt)
-            {
-              lws_write( wsi, g_bridge_msg_pkt, BRIDGE_HEADER_LNGTH+BODY_DATA_MAX_LNGTH, LWS_WRITE_BINARY );
-              g_should_send_msg_pkt = 0;
-            }
-            pthread_mutex_unlock(&g_bridge_msg_pkt_mutex);
-            break;
-        }
-
-        case LWS_CALLBACK_CLOSED:
-        case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
-            lwsl_user( "case LWS_CALLBACK_CLOSED or LWS_CALLBACK_CLIENT_CONNECTION_ERROR: \n" ) ;
-            web_socket = NULL;
-            break;
-
-        default:
-            lwsl_user( "case : default\n" ) ;
-            break;
-    }
-
-    return 0;
+/* cFE calls and websocket callbacks run on the same cFS application task. */
+static void RACS2_Receive(const uint8_t *bytes, size_t size)
+{
+    racs2_user_msg_t packet;
+    CFE_MSG_Type_t type;
+    CFE_Status_t status;
+    CFE_SB_MsgId_t mid;
+    if (!racs2_wire_valid_size(size))
+        return;
+    memset(&packet, 0, sizeof(packet));
+    mid = CFE_SB_ValueToMsgId(racs2_wire_mid(bytes));
+    status = CFE_MSG_Init(CFE_MSG_PTR(packet.TelemetryHeader), mid, sizeof(packet));
+    if (status != CFE_SUCCESS)
+        return;
+    packet.body_data_length = (uint8)(size - RACS2_HEADER_SIZE);
+    memcpy(packet.body_data, bytes + RACS2_HEADER_SIZE, packet.body_data_length);
+    if (CFE_MSG_GetType(CFE_MSG_PTR(packet.TelemetryHeader), &type) == CFE_SUCCESS &&
+        type == CFE_MSG_Type_Tlm)
+        CFE_SB_TimeStampMsg(CFE_MSG_PTR(packet.TelemetryHeader));
+    status = CFE_SB_TransmitMsg(CFE_MSG_PTR(packet.TelemetryHeader), true);
+    if (status != CFE_SUCCESS)
+        CFE_ES_WriteToSysLog("RACS2: SB transmit failed: %ld\n", (long)status);
 }
 
-static struct lws_protocols protocols[] =
+static int RACS2_Callback(struct lws *wsi, enum lws_callback_reasons reason,
+                         void *user, void *in, size_t len)
 {
+    (void)user;
+    switch (reason)
     {
-        "example-protocol",
-        callback_example,
-        0,
-        EXAMPLE_RX_BUFFER_BYTES,
-    },
-    { NULL, NULL, 0, 0 } /* terminator */
-};
-
-struct lws_context_creation_info g_info;
-struct lws_context * g_context ;
-time_t g_old = 0;
-
-/** * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/* RACS2_BRIDGE_CLIENT_Main() -- Application entry point and main process loop          */
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * *  * * * * * * * * * **/
-void RACS2_BRIDGE_CLIENT_Main( void )
-{
-    int32  status;
-    uint32 RunStatus = CFE_ES_RunStatus_APP_RUN;
-
-    OS_printf("RACS2_BRIDGE_CLIENT_Main starts.\n");
-
-    CFE_ES_PerfLogEntry(SAMPLE_APP_PERF_ID);
-
-    RACS2_BRIDGE_CLIENT_Init();
-
-    // == For WebScoket =======================
-    memset( &g_info, 0, sizeof( g_info ) );
-    g_info.port      = CONTEXT_PORT_NO_LISTEN;
-    g_info.protocols = protocols;
-    g_info.gid       = -1;
-    g_info.uid       = -1;
-
-    g_context = lws_create_context( &g_info );
-
-    lws_set_log_level( LLL_USER, NULL);
-    lwsl_user( "[BBB]: client - main\n" );
-    // ========================================
-
-    /*
-    ** RACS2_BRIDGE_CLIENT Runloop
-    */
-    while (CFE_ES_RunLoop(&RunStatus) == true)
-    {
-        CFE_ES_PerfLogExit(SAMPLE_APP_PERF_ID);
-
-        // === BBB: For WebSocket ===============
-        struct timeval tv;
-        gettimeofday( &tv, NULL );
-
-        /* Connect if we are not connected to the server. */
-        if( ! web_socket && tv.tv_sec != g_old )
-        {
-            struct lws_client_connect_info ccinfo = {0};
-            ccinfo.context = g_context ;
-            ccinfo.address = wss_uri;
-            ccinfo.port = wss_port;
-            ccinfo.path = "/";
-            ccinfo.host = lws_canonical_hostname( g_context );
-            ccinfo.origin = "origin";
-            ccinfo.protocol = protocols[PROTOCOL_EXAMPLE].name;
-            web_socket = lws_client_connect_via_info(&ccinfo);
-        }
-
-        if( tv.tv_sec != g_old )
-        {
-            /* Send a random number to the server every second. */
-            lws_callback_on_writable( web_socket );
-            g_old = tv.tv_sec;
-        }
-
-        /* Pend on receipt of command packet -- timeout set to 500 millisecs */
-        status = CFE_SB_RcvMsg(&RACS2_UserMsgPkt_Ptr, RACS2_BRIDGE_CLIENT_CommandPipe, 1000);
-
-        CFE_ES_PerfLogEntry(SAMPLE_APP_PERF_ID);
-
-        if (status == CFE_SUCCESS)
-        {
-            RACS2_BRIDGE_CLIENT_ProcessCommandPacket();
-        }
-        else
-        {
-            OS_printf("RACS2_BRIDGE_CLIENT: CFE_SB_RcvMsg failed, status = 0x%x\n", status);
-        }
-
-        lws_service( g_context, (0) );
-        // === EEE: For WebSocket =====================
-    }
-
-    CFE_ES_ExitApp(RunStatus);
-
-} /* End of RACS2_BRIDGE_CLIENT_Main() */
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  */
-/*                                                                            */
-/* RACS2_BRIDGE_CLIENT_Init() --  initialization                              */
-/*                                                                            */
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
-void RACS2_BRIDGE_CLIENT_Init(void)
-{
-    int32 status;
-
-    /**
-     * Read config
-    */
-    FILE *fp;
-    char line[64];
-    char key[16];
-    char value[16];
-    char extra;
-    bool has_wss_uri = false;
-    bool has_wss_port = false;
-
-    if ((fp = fopen("cf/racs2_bridge_config.txt", "r")) == NULL)
-    {
-        OS_printf("failed to open racs2_bridge_config.txt\n");
-        exit(-1);
-    }
-
-    char *ch_wss_uri  = "wss_uri";
-    char *ch_wss_port = "wss_port";
-    while (fgets(line, sizeof(line), fp) != NULL)
-    {
-        if (strchr(line, '\n') == NULL && !feof(fp))
-        {
-            int ch;
-            while ((ch = fgetc(fp)) != '\n' && ch != EOF)
+        case LWS_CALLBACK_CLIENT_ESTABLISHED:
+            Bridge.connection = wsi;
+            Bridge.connected = 1;
+            Bridge.rx_size = 0;
+            break;
+        case LWS_CALLBACK_CLIENT_RECEIVE:
+            if (lws_is_first_fragment(wsi))
+                Bridge.rx_size = 0;
+            if (!lws_frame_is_binary(wsi) || len > sizeof(Bridge.rx) - Bridge.rx_size)
+                return -1;
+            memcpy(Bridge.rx + Bridge.rx_size, in, len);
+            Bridge.rx_size += len;
+            if (lws_is_final_fragment(wsi) && lws_remaining_packet_payload(wsi) == 0)
             {
+                RACS2_Receive(Bridge.rx, Bridge.rx_size);
+                Bridge.rx_size = 0;
             }
-            OS_printf("RACS2_BRIDGE_CLIENT: config line is too long\n");
-            continue;
-        }
-
-        if (sscanf(line, "%15[^=]=%15s %c", key, value, &extra) != 2)
-        {
-            OS_printf("RACS2_BRIDGE_CLIENT: ignoring malformed config line\n");
-            continue;
-        }
-
-        // read uri
-        if (strcmp(key, ch_wss_uri) == 0)
-        {
-            snprintf(wss_uri, sizeof(wss_uri), "%s", value);
-            has_wss_uri = true;
-            OS_printf("wss_uri = [%s]\n", wss_uri);
-        }
-        // read port
-        if (strcmp(key, ch_wss_port) == 0)
-        {
-            char *endptr;
-            unsigned long parsed_port = strtoul(value, &endptr, 10);
-            if (endptr == value || *endptr != '\0' || parsed_port == 0 || parsed_port > 65535UL)
+            break;
+        case LWS_CALLBACK_CLIENT_WRITEABLE:
+            if (Bridge.count != 0)
             {
-                OS_printf("RACS2_BRIDGE_CLIENT: invalid wss_port [%s]\n", value);
-                fclose(fp);
-                exit(-1);
+                RACS2_Frame *frame = &Bridge.tx[Bridge.head];
+                if (lws_write(wsi, frame->bytes + LWS_PRE, frame->size, LWS_WRITE_BINARY) < (int)frame->size)
+                    return -1;
+                Bridge.head = (Bridge.head + 1) % RACS2_QUEUE_DEPTH;
+                --Bridge.count;
+                if (Bridge.count != 0)
+                    lws_callback_on_writable(wsi);
             }
-            wss_port = (uint16_t) parsed_port;
-            has_wss_port = true;
-            OS_printf("wss_port = [%d]\n", wss_port);
-        }
-    }
-
-    fclose(fp);
-
-    if (!has_wss_uri || !has_wss_port)
-    {
-        OS_printf("RACS2_BRIDGE_CLIENT: config requires wss_uri and wss_port\n");
-        exit(-1);
-    }
-
-    /*
-    ** Register the app with Executive services
-    */
-    CFE_ES_RegisterApp() ;
-
-    /*
-    ** Register the events
-    */
-    CFE_EVS_Register(SAMPLE_EventFilters,
-                     sizeof(SAMPLE_EventFilters)/sizeof(CFE_EVS_BinFilter_t),
-                     CFE_EVS_EventFilter_BINARY);
-
-    /*
-    ** Create the Software Bus command pipe and subscribe to housekeeping
-    **  messages
-    */
-    status = CFE_SB_CreatePipe(&RACS2_BRIDGE_CLIENT_CommandPipe, SAMPLE_PIPE_DEPTH, "TO_ROS");
-    if (status != CFE_SUCCESS)
-    {
-        OS_printf("RACS2_BRIDGE_CLIENT: failed to create SB pipe, status = 0x%x\n", status);
-    }
-    status = CFE_SB_Subscribe(RACS2_BRIDGE_MID, RACS2_BRIDGE_CLIENT_CommandPipe);
-    if (status != CFE_SUCCESS)
-    {
-        OS_printf("RACS2_BRIDGE_CLIENT: failed to subscribe MsgID[0x%x], status = 0x%x\n", RACS2_BRIDGE_MID, status);
-    }
-    RACS2_BRIDGE_CLIENT_ResetCounters();
-
-    CFE_SB_InitMsg(&RACS2_BRIDGE_CLIENT_HkTelemetryPkt,
-                   RACS2_BRIDGE_CLIENT_HK_TLM_MID,
-                   SAMPLE_APP_HK_TLM_LNGTH, true);
-
-    CFE_EVS_SendEvent (SAMPLE_STARTUP_INF_EID, CFE_EVS_EventType_INFORMATION,
-               "RACS2_BRIDGE_CLIENT App Initialized. Version %d.%d.%d.%d",
-                SAMPLE_APP_MAJOR_VERSION,
-                SAMPLE_APP_MINOR_VERSION,
-                SAMPLE_APP_REVISION,
-                SAMPLE_APP_MISSION_REV);
-
-} /* End of RACS2_BRIDGE_CLIENT_Init() */
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * ***/
-/*  Name:  RACS2_BRIDGE_CLIENT_ProcessCommandPacket                                            */
-/*                                                                                         */
-/*  Purpose:                                                                               */
-/*     This routine will process any packet that is received on the RACS2_BRIDGE_CLIENT    */
-/*     command pipe.                                                                       */
-/*                                                                                         */
-/* * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * *  * *  * * * * * * * * * * **/
-void RACS2_BRIDGE_CLIENT_ProcessCommandPacket(void)
-{
-    CFE_SB_MsgId_t  MsgId;
-
-    MsgId = CFE_SB_GetMsgId(RACS2_UserMsgPkt_Ptr);
-    OS_printf("RACS2_BRIDGE_CLIENT: recceived MsgId = %x\n", MsgId);
-
-    racs2_user_msg_t* tmp_ptr;
-
-    switch (MsgId)
-    {
-        case RACS2_BRIDGE_CLIENT_CMD_MID:
-            RACS2_BRIDGE_CLIENT_ProcessGroundCommand();
             break;
-
-        case RACS2_BRIDGE_CLIENT_SEND_HK_MID:
-            RACS2_BRIDGE_CLIENT_ReportHousekeeping();
+        case LWS_CALLBACK_CLIENT_CLOSED:
+        case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
+            Bridge.connection = NULL;
+            Bridge.connected = 0;
+            Bridge.count = 0;
+            Bridge.rx_size = 0;
+            Bridge.retry_at = time(NULL) + 1;
             break;
-
-        case RACS2_BRIDGE_MID:
-            tmp_ptr = (racs2_user_msg_t*) RACS2_UserMsgPkt_Ptr;
-            OS_printf("RACS2_BRIDGE_CLIENT: received sample message from talker, MID = [0x%x].\n",
-                MsgId
-            );
-            OS_printf("RACS2_BRIDGE_CLIENT: ros2_topic_name = %s\n", tmp_ptr->ros2_topic_name);
-            OS_printf("RACS2_BRIDGE_CLIENT: body_data_length = %d\n", tmp_ptr->body_data_length);
-
-            pthread_mutex_lock(&g_bridge_msg_pkt_mutex);
-            // Clear the message
-            memset(&g_bridge_msg_pkt, 0, ROS2_TOPIC_NAME_LNGTH+BODY_DATA_MAX_LNGTH);
-            // set topic name data
-            memcpy(&g_bridge_msg_pkt[0], (uint8_t*)&tmp_ptr->ros2_topic_name, ROS2_TOPIC_NAME_LNGTH);
-            // set body data
-            memcpy(&g_bridge_msg_pkt[BRIDGE_HEADER_LNGTH], (uint8_t*)&tmp_ptr->body_data, tmp_ptr->body_data_length);
-            g_should_send_msg_pkt = 1;
-            pthread_mutex_unlock(&g_bridge_msg_pkt_mutex);
-
-            break;
-
-        default:
-            RACS2_BRIDGE_CLIENT_HkTelemetryPkt.sample_command_error_count++;
-            CFE_EVS_SendEvent(SAMPLE_COMMAND_ERR_EID,CFE_EVS_EventType_ERROR,
-            "RACS2_BRIDGE_CLIENT: invalid command packet,MID = 0x%x", MsgId);
-            break;
-    }
-
-    return;
-
-} /* End RACS2_BRIDGE_CLIENT_ProcessCommandPacket */
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * ***/
-/*                                                                                     */
-/* RACS2_BRIDGE_CLIENT_ProcessGroundCommand() -- RACS2_BRIDGE_CLIENT ground commands   */
-/*                                                                                     */
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * ***/
-
-void RACS2_BRIDGE_CLIENT_ProcessGroundCommand(void)
-{
-    uint16 CommandCode;
-
-    CommandCode = CFE_SB_GetCmdCode(RACS2_UserMsgPkt_Ptr);
-
-    /* Process "known" RACS2_BRIDGE_CLIENT app ground commands */
-    switch (CommandCode)
-    {
-        case SAMPLE_APP_NOOP_CC:
-            RACS2_BRIDGE_CLIENT_HkTelemetryPkt.sample_command_count++;
-            CFE_EVS_SendEvent(SAMPLE_COMMANDNOP_INF_EID,
-                        CFE_EVS_EventType_INFORMATION,
-                        "RACS2_BRIDGE_CLIENT: NOOP command");
-            break;
-
-        case SAMPLE_APP_RESET_COUNTERS_CC:
-            RACS2_BRIDGE_CLIENT_ResetCounters();
-            break;
-
-        /* default case already found during FC vs length test */
         default:
             break;
     }
-    return;
+    return 0;
+}
+static const struct lws_protocols RACS2_Protocols[] = {
+    {.name = "example-protocol", .callback = RACS2_Callback,
+     .per_session_data_size = 0, .rx_buffer_size = RACS2_MESSAGE_MAX}, {0}};
 
-} /* End of RACS2_BRIDGE_CLIENT_ProcessGroundCommand() */
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
-/*  Name:  RACS2_BRIDGE_CLIENT_ReportHousekeeping                             */
-/*                                                                            */
-/*  Purpose:                                                                  */
-/*         This function is triggered in response to a task telemetry request */
-/*         from the housekeeping task. This function will gather the Apps     */
-/*         telemetry, packetize it and send it to the housekeeping task via   */
-/*         the software bus                                                   */
-/* * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * *  * *  * * * * */
-void RACS2_BRIDGE_CLIENT_ReportHousekeeping(void)
+/* Modern lws_service ignores its timeout argument. A scheduled callback
+ * wakes this task to check its SB pipe every 10 ms without busy polling. */
+static void RACS2_Wakeup(lws_sorted_usec_list_t *timer)
 {
-    CFE_SB_TimeStampMsg((CFE_SB_Msg_t *) &RACS2_BRIDGE_CLIENT_HkTelemetryPkt);
-    CFE_SB_SendMsg((CFE_SB_Msg_t *) &RACS2_BRIDGE_CLIENT_HkTelemetryPkt);
-    return;
-
-} /* End of RACS2_BRIDGE_CLIENT_ReportHousekeeping() */
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
-/*  Name:  RACS2_BRIDGE_CLIENT_ResetCounters                                               */
-/*                                                                            */
-/*  Purpose:                                                                  */
-/*         This function resets all the global counter variables that are     */
-/*         part of the task telemetry.                                        */
-/*                                                                            */
-/* * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * *  * *  * * * * */
-void RACS2_BRIDGE_CLIENT_ResetCounters(void)
+    lws_sul_schedule(Bridge.context, 0, timer, RACS2_Wakeup, 10000);
+}
+static int RACS2_ReadConfig(void)
 {
-    /* Status of commands processed by the RACS2_BRIDGE_CLIENT App */
-    RACS2_BRIDGE_CLIENT_HkTelemetryPkt.sample_command_count       = 0;
-    RACS2_BRIDGE_CLIENT_HkTelemetryPkt.sample_command_error_count = 0;
-
-    CFE_EVS_SendEvent(SAMPLE_COMMANDRST_INF_EID, CFE_EVS_EventType_INFORMATION,
-                      "RACS2_BRIDGE_CLIENT: RESET command");
-    return;
-
-} /* End of RACS2_BRIDGE_CLIENT_ResetCounters() */
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
-/*                                                                            */
-/* RACS2_BRIDGE_CLIENT_VerifyCmdLength() -- Verify command packet length                   */
-/*                                                                            */
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
-bool RACS2_BRIDGE_CLIENT_VerifyCmdLength(CFE_SB_MsgPtr_t msg, uint16 ExpectedLength)
-{
-    bool result = true;
-
-    uint16 ActualLength = CFE_SB_GetTotalMsgLength(msg);
-
-    /*
-    ** Verify the command packet length.
-    */
-    if (ExpectedLength != ActualLength)
+    char line[512];
+    const char *path = getenv("RACS2_CONFIG");
+    FILE *file = fopen(path ? path : "cf/racs2_bridge_config.txt", "r");
+    if (file == NULL)
+        return -1;
+    while (fgets(line, sizeof(line), file))
     {
-        CFE_SB_MsgId_t MessageID   = CFE_SB_GetMsgId(msg);
-        uint16         CommandCode = CFE_SB_GetCmdCode(msg);
-
-        CFE_EVS_SendEvent(SAMPLE_LEN_ERR_EID, CFE_EVS_EventType_ERROR,
-           "Invalid msg length: ID = 0x%X,  CC = %d, Len = %d, Expected = %d",
-              MessageID, CommandCode, ActualLength, ExpectedLength);
-        result = false;
-        RACS2_BRIDGE_CLIENT_HkTelemetryPkt.sample_command_error_count++;
-    }
-
-    return(result);
-
-} /* End of RACS2_BRIDGE_CLIENT_VerifyCmdLength() */
-
-bool is_new_msgid(uint16 msgid)
-{
-    if (registerd_msgid_num >= RACS2_BRIDGE_DEST_MSGID_NUM) return false;
-
-    int i = 0;
-    // check if msgid is already registered
-    for (i = 0; i < RACS2_BRIDGE_DEST_MSGID_NUM; i++)
-    {
-        if (msgid == dest_message_id_list[i])
+        char *key = strtok(line, "= \t\r\n");
+        char *value = strtok(NULL, " \t\r\n");
+        if (!key || !value || key[0] == '#')
+            continue;
+        if (strcmp(key, "wss_uri") == 0)
         {
-            return false;
+            if (strlen(value) >= sizeof(Bridge.host))
+            {
+                fclose(file);
+                return -1;
+            }
+            strcpy(Bridge.host, value);
+        }
+        else if (strcmp(key, "wss_port") == 0)
+        {
+            char *end;
+            long port;
+            errno = 0;
+            port = strtol(value, &end, 10);
+            if (errno || *end || port < 1 || port > 65535)
+            {
+                fclose(file);
+                return -1;
+            }
+            Bridge.port = (int)port;
         }
     }
-    // register msgid
-    dest_message_id_list[registerd_msgid_num] = msgid;
-    registerd_msgid_num++;
-    OS_printf("RACS2_BRIDGE_CLIENT: register msgid[%x], number of reigsterd ID[%d]\n", msgid, registerd_msgid_num);
-
-    return true;
+    fclose(file);
+    return Bridge.host[0] && Bridge.port ? 0 : -1;
+}
+static CFE_Status_t RACS2_Init(void)
+{
+    struct lws_context_creation_info info;
+    CFE_Status_t status;
+    memset(&Bridge, 0, sizeof(Bridge));
+    if (RACS2_ReadConfig() != 0)
+    {
+        CFE_ES_WriteToSysLog("RACS2: cannot read valid bridge configuration\n");
+        return CFE_SB_BAD_ARGUMENT;
+    }
+    CFE_EVS_Register(NULL, 0, CFE_EVS_EventFilter_BINARY);
+    status = CFE_SB_CreatePipe(&Bridge.pipe, RACS2_QUEUE_DEPTH, "RACS2_TO_ROS");
+    if (status != CFE_SUCCESS)
+        return status;
+    status = CFE_SB_Subscribe(CFE_SB_ValueToMsgId(RACS2_BRIDGE_MID), Bridge.pipe);
+    if (status != CFE_SUCCESS)
+        return status;
+    memset(&info, 0, sizeof(info));
+    info.port = CONTEXT_PORT_NO_LISTEN;
+    info.protocols = RACS2_Protocols;
+    info.gid = -1;
+    info.uid = -1;
+    Bridge.context = lws_create_context(&info);
+    if (Bridge.context == NULL)
+        return CFE_STATUS_EXTERNAL_RESOURCE_FAIL;
+    lws_sul_schedule(Bridge.context, 0, &Bridge.wakeup, RACS2_Wakeup, 10000);
+    CFE_EVS_SendEvent(41, CFE_EVS_EventType_INFORMATION, "RACS2 cFE 7 client initialized");
+    return CFE_SUCCESS;
+}
+static void RACS2_QueueSB(const CFE_SB_Buffer_t *buffer)
+{
+    const racs2_user_msg_t *packet = (const racs2_user_msg_t *)buffer;
+    CFE_MSG_Size_t size;
+    RACS2_Frame *frame;
+    if (!Bridge.connected || Bridge.count == RACS2_QUEUE_DEPTH)
+        return;
+    if (CFE_MSG_GetSize(&buffer->Msg, &size) != CFE_SUCCESS ||
+        size < offsetof(racs2_user_msg_t, body_data) || packet->body_data_length > RACS2_BODY_MAX ||
+        size < offsetof(racs2_user_msg_t, body_data) + packet->body_data_length)
+        return;
+    frame = &Bridge.tx[(Bridge.head + Bridge.count) % RACS2_QUEUE_DEPTH];
+    memcpy(frame->bytes + LWS_PRE, packet->ros2_topic_name, RACS2_HEADER_SIZE);
+    memcpy(frame->bytes + LWS_PRE + RACS2_HEADER_SIZE, packet->body_data, packet->body_data_length);
+    frame->size = RACS2_HEADER_SIZE + packet->body_data_length;
+    ++Bridge.count;
+    lws_callback_on_writable(Bridge.connection);
+}
+void RACS2_CLIENT_Main(void)
+{
+    uint32 run_status = CFE_ES_RunStatus_APP_RUN;
+    if (RACS2_Init() != CFE_SUCCESS)
+        run_status = CFE_ES_RunStatus_APP_ERROR;
+    while (CFE_ES_RunLoop(&run_status))
+    {
+        unsigned int count;
+        if (Bridge.connection == NULL && time(NULL) >= Bridge.retry_at)
+        {
+            struct lws_client_connect_info info;
+            memset(&info, 0, sizeof(info));
+            info.context = Bridge.context;
+            info.address = Bridge.host;
+            info.port = Bridge.port;
+            info.path = "/";
+            info.host = Bridge.host;
+            info.protocol = RACS2_Protocols[0].name;
+            Bridge.retry_at = time(NULL) + 1;
+            lws_client_connect_via_info(&info);
+        }
+        for (count = 0; count < RACS2_QUEUE_DEPTH; ++count)
+        {
+            CFE_SB_Buffer_t *buffer;
+            if (CFE_SB_ReceiveBuffer(&buffer, Bridge.pipe, CFE_SB_POLL) != CFE_SUCCESS)
+                break;
+            RACS2_QueueSB(buffer);
+        }
+        if (lws_service(Bridge.context, 0) < 0)
+            run_status = CFE_ES_RunStatus_APP_ERROR;
+    }
+    if (Bridge.context)
+    {
+        lws_sul_schedule(Bridge.context, 0, &Bridge.wakeup,
+                         RACS2_Wakeup, LWS_SET_TIMER_USEC_CANCEL);
+        lws_context_destroy(Bridge.context);
+    }
+    CFE_ES_ExitApp(run_status);
 }

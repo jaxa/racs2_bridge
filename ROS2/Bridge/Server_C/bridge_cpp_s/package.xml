@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>bridge_cpp_s</name>
+  <version>1.2.0</version>
+  <description>RACS2 C++ WebSocket server</description>
+  <maintainer email="jaxa@jaxa.jp">RACS2 contributors</maintainer>
+  <license>Apache-2.0</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>rclcpp</depend>
+  <depend>racs2_msg</depend>
+  <depend>libwebsockets-dev</depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

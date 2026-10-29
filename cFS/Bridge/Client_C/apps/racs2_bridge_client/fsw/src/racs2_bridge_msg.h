@@ -12,7 +12,7 @@ typedef struct
     uint8              header[BRIDGE_HEADER_LNGTH];
     uint8              body_data[BODY_DATA_MAX_LNGTH];
 
-}   OS_PACK racs2_bridge_msg_t  ;
+} racs2_bridge_msg_t;
 
 #define RACS2_BRIDGE_MSG_LNGTH   sizeof ( racs2_bridge_msg_t )
 

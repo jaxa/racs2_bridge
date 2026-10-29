@@ -29,15 +29,6 @@
 ** Note: Except for the entry point (SAMPLE_AppMain), these
 **       functions are not called from any other source module.
 */
-void SAMPLE_AppMain(void);
-void SAMPLE_AppInit(void);
-void SAMPLE_LISTENER_ProcessCommandPacket(void);
-void RACS2_BRIDGE_CLIENT_ProcessGroundCommand(void);
-void RACS2_BRIDGE_CLIENT_ReportHousekeeping(void);
-void RACS2_BRIDGE_CLIENT_ResetCounters(void);
-
-bool RACS2_BRIDGE_CLIENT_VerifyCmdLength(CFE_SB_MsgPtr_t msg, uint16 ExpectedLength);
-
-bool is_new_msgid(uint16 msgid);
+void RACS2_CLIENT_Main(void);
 
 #endif /* _racs2_bridge_client_h_ */

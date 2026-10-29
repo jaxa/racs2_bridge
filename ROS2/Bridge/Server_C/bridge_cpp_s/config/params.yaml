@@ -1,0 +1,4 @@
+/**:
+  ros__parameters:
+    wss_uri: "127.0.0.1"
+    wss_port: 8765

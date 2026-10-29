@@ -1,5 +1,12 @@
 # RACS2 (ROS2 and cFS System) Bridge
 
+The [cFE 7 / ROS 2 C++ bridge](Document/cFE7-ROS2-Cpp.md) uses libwebsockets
+on both sides and sends only the valid binary body, without protobuf or
+fixed 128-byte body padding. The guide covers dependencies, build steps,
+cFS mission configuration and operation.
+
+The instructions below describe the original cFE 6 / Python examples.
+
 ## Overview
 
 This repository is a collection of software and examples that bridge message communication between Robot Operating System 2 (ROS2) nodes and core flight executives (cFE).  cFE is a core component of NASA-supplied spacecraft software, Core Flight System (CFS).

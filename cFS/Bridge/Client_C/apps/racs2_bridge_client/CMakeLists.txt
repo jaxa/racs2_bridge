@@ -1,14 +1,14 @@
-cmake_minimum_required(VERSION 2.6.4)
+cmake_minimum_required(VERSION 3.16)
 project(CFE_RACS2_BRIDGE_CLIENT C)
-
-include_directories(fsw/mission_inc)
-include_directories(fsw/platform_inc)
-
-aux_source_directory(fsw/src APP_SRC_FILES)
-
-# Create the app module
-add_cfe_app(racs2_bridge_client ${APP_SRC_FILES})
-
-target_link_libraries(racs2_bridge_client
-  websockets
-)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LWS REQUIRED IMPORTED_TARGET libwebsockets)
+get_filename_component(RACS2_APP_DIR "${CMAKE_CURRENT_SOURCE_DIR}" REALPATH)
+get_filename_component(RACS2_ROOT "${RACS2_APP_DIR}/../../../../.." ABSOLUTE)
+if(NOT RACS2_COMMON_DIR)
+  set(RACS2_COMMON_DIR "${RACS2_ROOT}/Common/include")
+endif()
+add_cfe_app(racs2_bridge_client fsw/src/racs2_bridge_client.c)
+# OSAL defaults to a 20-byte filename limit, including the terminating NUL.
+set_target_properties(racs2_bridge_client PROPERTIES OUTPUT_NAME racs2_client)
+target_include_directories(racs2_bridge_client PUBLIC "${RACS2_COMMON_DIR}" fsw/platform_inc)
+target_link_libraries(racs2_bridge_client PkgConfig::LWS)
