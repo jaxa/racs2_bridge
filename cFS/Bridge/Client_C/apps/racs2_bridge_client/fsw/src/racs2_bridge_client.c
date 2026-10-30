@@ -54,6 +54,11 @@ enum protocols
 uint8_t registerd_msgid_num = 0;
 uint16 dest_message_id_list[RACS2_BRIDGE_DEST_MSGID_NUM] = {0};
 
+struct receive_state {
+    uint8_t data[RACS2_BRIDGE_HEADER_LENGTH + BODY_DATA_MAX_LNGTH];
+    size_t used;
+};
+
 static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
 {
     lwsl_user( "BBB: callback_example()\n" ) ;
@@ -67,9 +72,30 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
             break;
 
         case LWS_CALLBACK_CLIENT_RECEIVE:
+        {
+            struct receive_state *rx = (struct receive_state *)user;
+            if (len > sizeof(rx->data) - rx->used)
+            {
+                OS_printf("RACS2_BRIDGE_CLIENT: receive message exceeds capacity\n");
+                lwsl_err("RACS2_BRIDGE_CLIENT: receive message exceeds capacity\n");
+                return -1;
+            }
+            if (len != 0)
+                memcpy(rx->data + rx->used, in, len);
+            rx->used += len;
+            if (!lws_is_final_fragment(wsi) || lws_remaining_packet_payload(wsi) != 0)
+                break;
+            in = rx->data;
+            len = rx->used;
+            rx->used = 0;
+            if (len < RACS2_BRIDGE_HEADER_LENGTH ||
+                len > RACS2_BRIDGE_HEADER_LENGTH + BODY_DATA_MAX_LNGTH)
+            {
+                lwsl_err("RACS2_BRIDGE_CLIENT: invalid receive length: %zu\n", len);
+                break;
+            }
             lwsl_user( "case LWS_CALLBACK_CLIENT_RECEIVE: \n" ) ;
-            lwsl_user( "[Recv]: %s\n", (char*)in ) ;
-            lwsl_user( "[Recv]: data len = %ld\n", len ) ;
+            lwsl_user( "[Recv]: data len = %zu\n", len ) ;
 
             // === send message =========================
             char *hello = "Hello";
@@ -112,6 +138,7 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
 
             break;
 
+        }
         case LWS_CALLBACK_CLIENT_WRITEABLE:
         {
             lwsl_user( "case LWS_CALLBACK_CLIENT_WRITEABLE: \n" ) ;
@@ -127,6 +154,7 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
         }
 
         case LWS_CALLBACK_CLOSED:
+        case LWS_CALLBACK_CLIENT_CLOSED:
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
             lwsl_user( "case LWS_CALLBACK_CLOSED or LWS_CALLBACK_CLIENT_CONNECTION_ERROR: \n" ) ;
             web_socket = NULL;
@@ -145,7 +173,7 @@ static struct lws_protocols protocols[] =
     {
         "example-protocol",
         callback_example,
-        0,
+        sizeof(struct receive_state),
         EXAMPLE_RX_BUFFER_BYTES,
     },
     { NULL, NULL, 0, 0 } /* terminator */
@@ -210,7 +238,8 @@ void RACS2_BRIDGE_CLIENT_Main( void )
         if( tv.tv_sec != g_old )
         {
             /* Send a random number to the server every second. */
-            lws_callback_on_writable( web_socket );
+            if (web_socket != NULL)
+                lws_callback_on_writable( web_socket );
             g_old = tv.tv_sec;
         }
 
