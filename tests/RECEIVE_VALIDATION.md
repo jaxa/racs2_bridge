@@ -1,0 +1,9 @@
+# Receive validation
+
+Run `python3 -m pytest -q tests/test_receive_source.py` with pytest and clang installed. The test extracts the receive case from the actual C source and compiles it with AddressSanitizer and UndefinedBehaviorSanitizer. cFS and WebSocket calls are stubbed. It checks ten length boundaries, fragmented payload reconstruction, remaining-payload handling, successive messages and separate connection state. It does not test the complete application.
+
+Additional local integration used Ubuntu 22.04 ARM64, libwebsockets 4.0.20, Python websockets 12.0, cFS v6.7.0a and its pinned submodules. Configure cFS through `cmake -S cfe -B build -DSIMULATION=native`, then build `mission-all` and `mission-install`; the mission target generates the required version headers. Container execution required SYS_NICE, rtprio 99, msgqueue 8192000 and fs.mqueue.msg_max=256.
+
+For reproduction, register a cFS test application subscribed to MID 0x1894. Send a 32-byte header beginning with 0x18,0x94 followed by 128 bytes with value i modulo 251. Send it whole and split after byte 16. Check all 128 payload bytes at the subscriber. Send a 161-byte message and require client disconnection. After reconnection, resend the valid message and check the subscriber again.
+
+Observed locally: three subscriber deliveries, all length 128 and all bytes equal; over-capacity input was rejected and two WebSocket connections were established. An earlier comparison with 128-byte messages gave body lengths [96,240,80,224] before the patch and [96,96] after it. Local NOVA audits recorded the logs and verified their hashes; formal_pass remained false. These observations are local evidence, not third-party reproduction or flight qualification. The complete Docker integration fixture is not included here; the automated test above is the source-extraction test only.
